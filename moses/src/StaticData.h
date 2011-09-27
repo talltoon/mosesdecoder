@@ -46,6 +46,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "DecodeGraph.h"
 #include "TranslationOptionList.h"
 #include "TranslationSystem.h"
+#include "SpecOpt.h"
 
 #if HAVE_CONFIG_H
 #include "config.h"
@@ -71,11 +72,38 @@ class TranslationSystem;
 typedef std::pair<std::string, float> UnknownLHSEntry;
 typedef std::vector<UnknownLHSEntry>  UnknownLHSList;
 
+// MJD: A function for static initialization of arrays. Used to set
+// the container of StaticData pointers at startup.
+template<typename T>
+T* InitArray(size_t size, T value) {
+  T* a = new T[size];
+  for(size_t i = 0; i < size; i++)
+    a[i] = value;
+  return a;
+}
+
 /** Contains global variables and contants */
 class StaticData
 {
 private:
-  static StaticData									s_instance;
+  
+// MJD: All the stuff for handling multithread dynamic parameters
+// with as little locking as possible
+#ifdef WITH_THREADS
+  #ifdef BOOST_HAS_PTHREADS
+    #define MAX_INSTANCES 100
+    static boost::mutex s_threadMutex;
+    static size_t s_threads_num;
+    static pthread_t* s_threads;
+    static StaticData** s_instances;
+  #endif
+#endif
+
+  static StaticData s_instance;
+  
+  // MJD: A helpful pointer for multithread dynamic parameters
+  static StaticData* s_instance_ptr;
+
 protected:
 
   std::map<long,Phrase> m_constraints;
@@ -123,6 +151,9 @@ protected:
 
   std::string									m_nBestFilePath;
   bool                        m_fLMsLoaded, m_labeledNBestList,m_nBestIncludesAlignment;
+  
+  // MJD: Parameter for WIPO-specific n-best list format
+  bool m_nBestWipo;
   bool m_dropUnknown; //! false = treat unknown words as unknowns, and translate them as themselves; true = drop (ignore) them
   bool m_wordDeletionEnabled;
 
@@ -236,15 +267,87 @@ protected:
   bool m_continuePartialTranslation;
 
 public:
+  // MJD: Added copy constructor. See StaticData.cpp
+  StaticData(const StaticData& s);
 
   bool IsAlwaysCreateDirectTranslationOption() const {
     return m_isAlwaysCreateDirectTranslationOption;
   }
   //! destructor
   ~StaticData();
+  
+  #ifdef WITH_THREADS
+  #ifdef BOOST_HAS_PTHREADS
+  
+  // MJD: has to be called once by each thread before translating a sentence
+  // with dynamic paramters. See e.g. moses-cmd/src/Main.cpp.
+  // Locking is only neccessary if the thread is assigned for the first time.
+  // After that, each thread will access only its own slot. 
+  static void CreateThreadInstance() {
+    pthread_t thisThread = pthread_self();
+    for(size_t i = 0; i < s_threads_num; i++) {
+      if(s_threads[i] == thisThread) {
+	s_instances[i] = new StaticData(s_instance);
+	return;
+      }
+    }
+    if(s_threads_num < MAX_INSTANCES) {
+      boost::mutex::scoped_lock lock(s_threadMutex);
+      if(s_threads[s_threads_num] == 0) {
+	s_threads[s_threads_num] = thisThread;
+	s_instances[s_threads_num] = new StaticData(s_instance);
+	s_threads_num++;
+	std::cerr << "Registered thread id" << thisThread << " " << s_threads_num << std::endl;
+	return;
+      }
+    }
+  }
+  
+  // MJD: has to be called after each sentence to destroy the modified StaticData
+  // instance. Counterpart to the previous function. No locking is needed for the
+  // same reseasons as above. Only StaticData objects that are copies are destroyed.
+  // The main StaticData instance remains untouched. 
+  static void DeleteThreadInstance() {
+    pthread_t thisThread = pthread_self();
+    for(size_t i = 0; i < s_threads_num; i++) {
+      if(s_threads[i] == thisThread) {
+	if(s_instances[i] != &s_instance)
+	  delete s_instances[i];
+	s_instances[i] = &s_instance;
+	return;
+      }
+    }
+  }
+  #endif
+  #endif
+  
+  // MJD: Dynamic parameter handling with single thread.  
+  static void CreateTempInstance() {
+    s_instance_ptr = new StaticData(s_instance);
+  }
+  
+  // MJD: Dynamic parameter handling with single thread.  
+  static void DeleteTempInstance() {
+    if(s_instance_ptr != &s_instance) {
+      StaticData* t_ptr = s_instance_ptr;
+      s_instance_ptr = &s_instance;
+      delete t_ptr;
+    }
+  }
+    
   //! return static instance for use like global variable
   static const StaticData& Instance() {
-    return s_instance;
+    // MJD: return the StaticData instance assigned to this thread 
+    #ifdef WITH_THREADS
+      #ifdef BOOST_HAS_PTHREADS
+      pthread_t thisThread = pthread_self();
+      for(size_t i = 0; i < s_threads_num; i++)
+	if(s_threads[i] == thisThread)
+	  return *s_instances[i];
+      #endif
+    #endif
+    
+    return *s_instance_ptr;
   }
 
   /** delete current static instance and replace with another.
@@ -252,6 +355,7 @@ public:
   	*/
 #ifdef WIN32
   static void Reset() {
+    // MJD: Probably should do something with that, but who uses windows?
     s_instance = StaticData();
   }
 #endif
@@ -392,6 +496,12 @@ public:
   bool NBestIncludesAlignment() const {
     return m_nBestIncludesAlignment;
   }
+  
+  // MJD: WIPO-specific n-best list
+  bool UseNBestWipoFormat() const {
+     return m_nBestWipo;
+  }
+  
   size_t GetNumLinkParams() const {
     return m_numLinkParams;
   }
@@ -601,6 +711,13 @@ public:
   int ThreadCount() const {
     return m_threadCount;
   }
+  
+  // MJD: Sets a named translation system parameter, returns the previous value.
+  const WeightInfos SetTranslationSystemWeights(const TranslationSystem& system, const WeightInfos& newWeights);
+  WeightInfo SetTranslationSystemWeight(const TranslationSystem& system, WeightInfo wi);
+  
+  // MJD: Sets a collection of global parameters, returns the previous set of parameters.
+  Parameter SetGlobalParameters(const Parameter&);
 };
 
 }

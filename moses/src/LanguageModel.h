@@ -68,6 +68,9 @@ public:
    */
   LanguageModel(ScoreIndexManager &scoreIndexManager, LanguageModel *implementation);
 
+  // MJD: Added copy constructor
+  LanguageModel(const LanguageModel& copy);
+  
   virtual ~LanguageModel();
 
   //! see ScoreProducer.h

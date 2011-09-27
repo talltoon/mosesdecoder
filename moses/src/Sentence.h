@@ -28,6 +28,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "Phrase.h"
 #include "InputType.h"
 #include "XmlOption.h"
+#include "SpecOpt.h"
 
 namespace Moses
 {
@@ -53,6 +54,7 @@ private:
    */
   std::vector <TranslationOption*> m_xmlOptionsList;
   std::vector <bool> m_xmlCoverageMap;
+  SpecOpt m_specificOptions;
 
   NonTerminalSet m_defaultLabelSet;
 
@@ -65,6 +67,9 @@ public:
   InputTypeEnum GetType() const {
     return SentenceInput;
   }
+  
+  //MJD: Temporary bugfix. See Sentence.cpp
+  ~Sentence();
 
   //! Calls Phrase::GetSubString(). Implements abstract InputType::GetSubString()
   Phrase GetSubString(const WordsRange& r) const {
@@ -79,6 +84,11 @@ public:
   //! Calls Phrase::GetSize(). Implements abstract InputType::GetSize()
   size_t GetSize() const {
     return Phrase::GetSize();
+  }
+
+  // MJD: Returns the SpecOpt object holding dynamically set parameters
+  const SpecOpt& GetSpecificOptions() const {
+    return m_specificOptions;
   }
 
   //! Returns true if there were any XML tags parsed that at least partially covered the range passed

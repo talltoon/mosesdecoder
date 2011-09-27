@@ -109,6 +109,7 @@ libmoses_la_HEADERS = \
         Sentence.h \
         SentenceStats.h \
         SquareMatrix.h \
+        SpecOpt.h \
         StaticData.h \
         TargetPhrase.h \
         TargetPhraseCollection.h \
@@ -269,6 +270,7 @@ libmoses_la_SOURCES = \
         SentenceStats.cpp \
         SquareMatrix.cpp \
         StaticData.cpp \
+        SpecOpt.cpp \
         TargetPhrase.cpp \
         TargetPhraseCollection.cpp \
         ThreadPool.cpp \

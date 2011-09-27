@@ -180,38 +180,50 @@ public:
       (const_cast<StaticData&>(staticData)).SetOutputSearchGraph(true);
     }
 
-    const TranslationSystem& system = getTranslationSystem(params);
-
     Sentence sentence(Input);
     const vector<FactorType> &inputFactorOrder =
       staticData.GetInputFactorOrder();
     stringstream in(source + "\n");
     sentence.Read(in,inputFactorOrder);
-    Manager manager(sentence,staticData.GetSearchAlgorithm(), &system);
-    manager.ProcessSentence();
-    const Hypothesis* hypo = manager.GetBestHypothesis();
-
-    vector<xmlrpc_c::value> alignInfo;
-    stringstream out, graphInfo, transCollOpts;
-    outputHypo(out,hypo,addAlignInfo,alignInfo,reportAllFactors);
-
-    map<string, xmlrpc_c::value> retData;
-    pair<string, xmlrpc_c::value>
-    text("text", xmlrpc_c::value_string(out.str()));
-    cerr << "Output: " << out.str() << endl;
-    if (addAlignInfo) {
-      retData.insert(pair<string, xmlrpc_c::value>("align", xmlrpc_c::value_array(alignInfo)));
+    
+    SpecOpt specOpt = sentence.GetSpecificOptions();
+    if(specOpt.HasSpecificOptions()) {
+      StaticData::CreateThreadInstance();
+      const TranslationSystem& system = StaticData::Instance().GetTranslationSystem(specOpt.GetTranslationSystemId());
+      const_cast<StaticData&>(StaticData::Instance()).SetTranslationSystemParameters(system, specOpt.GetParameters());  
+      const_cast<StaticData&>(StaticData::Instance()).SetGlobalParameters(specOpt.GetSwitches());
     }
-    retData.insert(text);
-
-    if(addGraphInfo) {
-      insertGraphInfo(manager,retData);
-      (const_cast<StaticData&>(staticData)).SetOutputSearchGraph(false);
+    
+    {
+      const TranslationSystem& system = getTranslationSystem(params);
+  
+      Manager manager(sentence,staticData.GetSearchAlgorithm(), &system);
+      manager.ProcessSentence();
+      const Hypothesis* hypo = manager.GetBestHypothesis();
+  
+      vector<xmlrpc_c::value> alignInfo;
+      stringstream out, graphInfo, transCollOpts;
+      outputHypo(out,hypo,addAlignInfo,alignInfo,reportAllFactors);
+  
+      map<string, xmlrpc_c::value> retData;
+      pair<string, xmlrpc_c::value>
+      text("text", xmlrpc_c::value_string(out.str()));
+      cerr << "Output: " << out.str() << endl;
+      if (addAlignInfo) {
+        retData.insert(pair<string, xmlrpc_c::value>("align", xmlrpc_c::value_array(alignInfo)));
+      }
+      retData.insert(text);
+  
+      if(addGraphInfo) {
+        insertGraphInfo(manager,retData);
+        (const_cast<StaticData&>(staticData)).SetOutputSearchGraph(false);
+      }
+      if (addTopts) {
+        insertTranslationOptions(manager,retData);
+      }
+      *retvalP = xmlrpc_c::value_struct(retData);
     }
-    if (addTopts) {
-      insertTranslationOptions(manager,retData);
-    }
-    *retvalP = xmlrpc_c::value_struct(retData);
+    StaticData::DeleteThreadInstance();
   }
 
   void outputHypo(ostream& out, const Hypothesis* hypo, bool addAlignmentInfo, vector<xmlrpc_c::value>& alignInfo, bool reportAllFactors = false) {

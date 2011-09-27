@@ -44,6 +44,14 @@ Sentence::Sentence(FactorDirection direction)
   }
 }
 
+// MJD: Bugfix. TODO: Check whether this is still neccessary
+Sentence::~Sentence()
+{
+  // MJD: Now adding copies of TranslationOptions to collection due to bugfix
+  // in GetXmlTranslationOptions. See below. TODO: Fix this in trunk?
+  RemoveAllInColl(m_xmlOptionsList);
+}
+
 int Sentence::Read(std::istream& in,const std::vector<FactorType>& factorOrder)
 {
   const std::string& factorDelimiter = StaticData::Instance().GetFactorDelimiter();
@@ -87,6 +95,9 @@ int Sentence::Read(std::istream& in,const std::vector<FactorType>& factorOrder)
 
   // remove extra spaces
   line = Trim(line);
+
+  // MJD: Grab and strip dynamically set parameters.
+  m_specificOptions = SpecOpt(line);
 
   // if sentences is specified as "<seg id=1> ... </seg>", extract id
   meta = ProcessAndStripSGML(line);
@@ -202,7 +213,10 @@ void Sentence::GetXmlTranslationOptions(std::vector <TranslationOption*> &list, 
   for (std::vector<TranslationOption*>::const_iterator iterXMLOpts = m_xmlOptionsList.begin();
        iterXMLOpts != m_xmlOptionsList.end(); iterXMLOpts++) {
     if (startPos == (**iterXMLOpts).GetSourceWordsRange().GetStartPos() && endPos == (**iterXMLOpts).GetSourceWordsRange().GetEndPos()) {
-      list.push_back(*iterXMLOpts);
+      // MJD: With more than one decoding graph, the same TranslationOption is
+      // added several times. Leads to segfault when freeing later.
+      list.push_back(new TranslationOption(**iterXMLOpts));
+      //list.push_back(*iterXMLOpts);
     }
   }
 }

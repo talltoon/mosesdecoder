@@ -89,13 +89,38 @@ public:
 #ifdef BOOST_HAS_PTHREADS
     TRACE_ERR("Translating line " << m_lineNumber << "  in thread id " << pthread_self() << std::endl);
 #endif
+    std::string translationSystemId = TranslationSystem::DEFAULT;
 
+    if(m_source->GetType() == SentenceInput) {
+      // MJD: Check whether there are dynamic paramters defined in the sentence.
+      SpecOpt specOpt = ((Sentence*) m_source)->GetSpecificOptions();
+      if(specOpt.HasSpecificOptions()) {
+
+	// MJD: create a new StaticData instance for this thread or process
+	// if there where dynamic parameters defined in the sentence.
+	#ifdef WITH_THREADS
+	  #ifdef BOOST_HAS_PTHREADS
+	  StaticData::CreateThreadInstance();
+	  #endif
+	#else
+	  StaticData::CreateTempInstance();  
+	#endif
+	
+    
+	translationSystemId = specOpt.GetTranslationSystemId();
+	const TranslationSystem& system = StaticData::Instance().GetTranslationSystem(translationSystemId);
+	
+	// MJD: Apply dynamic paramters;
+	const_cast<StaticData&>(StaticData::Instance()).SetTranslationSystemWeights(system, specOpt.GetWeights());  
+	const_cast<StaticData&>(StaticData::Instance()).SetGlobalParameters(specOpt.GetSwitches());
+      }
+    }
+    // MJD: Scope added. Lets manager go out of scope before StaticData is destroyed.
+    {
     // shorthand for "global data"
     const StaticData &staticData = StaticData::Instance();
-    // input sentence
-    Sentence sentence(Input);
     // set translation system
-    const TranslationSystem& system = staticData.GetTranslationSystem(TranslationSystem::DEFAULT);
+    const TranslationSystem& system = staticData.GetTranslationSystem(translationSystemId);
 
     // execute the translation
     // note: this executes the search, resulting in a search graph
@@ -253,6 +278,19 @@ public:
       PrintUserTime("Sentence Decoding Time:");
     }
     manager.CalcDecoderStatistics();
+    
+    // MJD: Let manager go out of scope;
+    }
+    
+    // MJD: Delete the StaticData instance assigned to the thread or process.
+    // Does not do anything if it is the main unmodified instance.
+    #ifdef WITH_THREADS
+      #ifdef BOOST_HAS_PTHREADS
+      StaticData::DeleteThreadInstance();
+      #endif
+    #else
+      StaticData::DeleteTempInstance();  
+    #endif
   }
 
   ~TranslationTask() {

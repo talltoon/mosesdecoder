@@ -63,6 +63,15 @@ LanguageModel::LanguageModel(ScoreIndexManager &scoreIndexManager, LanguageModel
 #endif
 }
 
+// MJD: Added copy constructor definition
+LanguageModel::LanguageModel(const LanguageModel& copy) :
+  StatefulFeatureFunction(copy), m_implementation(copy.m_implementation), m_enableOOVFeature(copy.m_enableOOVFeature)
+{
+#ifndef WITH_THREADS
+  m_implementation->IncrementReferenceCount();
+#endif
+}
+
 LanguageModel::~LanguageModel()
 {
 #ifndef WITH_THREADS
