@@ -502,13 +502,19 @@ bool Parameter::ReadConfigFile(const string &filePath )
         }
       }
     } else if (line != "") {
-      // MJD: TODO: Check whether this works now for n-best
-      // lists defined in moses.ini
-      
-      // add value to parameter
-      m_setting[paramName].push_back(line);
+      // MJD: Really ugly bugfix
+      // TODO: Tell someone that this is not working properly
+      if(paramName == "n-best-list") {
+	std::vector<std::string> targs = Tokenize(line);
+	for(size_t i=0; i < targs.size(); i++)
+	  m_setting[paramName].push_back(targs[i]);
+      }
+      else 
+	m_setting[paramName].push_back(line);
     }
   }
+    
+
   return true;
 }
 
