@@ -1,8 +1,13 @@
 #include <iostream>
-#include "TypeDef.h"
-#include "PhraseDictionaryMemoryHashed.h"
+#include <string>
+
+#include "Timer.h"
+#include "InputFileStream.h"
+#include "LexicalReorderingTable.h"
 
 using namespace Moses;
+
+Timer timer;
 
 void printHelp()
 {
@@ -13,9 +18,9 @@ void printHelp()
             "\n";
 }
 
-int main(int argc,char **argv) {
+int main(int argc, char** argv)
+{
   std::cerr << "processLexicalTableHashed by Marcin Junczys-Dowmunt\n";
-  
   std::string inFilePath;
   std::string outFilePath("out");
   if(1 >= argc) {
@@ -37,10 +42,14 @@ int main(int argc,char **argv) {
     }
   }
 
-  
-  size_t numScoreComponent = 5;  
-  PhraseDictionaryMemoryHashed pt(numScoreComponent, MemoryHashedText, NULL);
-  pt.LoadText(inFilePath);
-  std::cerr << "Saving to " << outFilePath << ".mphlexr" << std::endl;
-  pt.SaveBinary(outFilePath + ".mphlexr");
+
+  std::cerr << "Processing " << inFilePath<< " to " << outFilePath << std::endl;
+  std::vector<FactorType> e_factors(1, 0);
+  std::vector<FactorType> f_factors(1, 0);
+  std::vector<FactorType> c_factors;
+  LexicalReorderingTableMemoryHashed lextable(e_factors, f_factors, c_factors);
+  lextable.LoadText(inFilePath);
+  std::cerr << "Saving now to " << outFilePath << ".mphlexr" << std::endl;
+  lextable.SaveBinary(outFilePath + ".mphlexr");
+  std::cerr << "Done" << std::endl;
 }
