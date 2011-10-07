@@ -41,6 +41,6 @@ int main(int argc,char **argv) {
   size_t numScoreComponent = 5;  
   PhraseDictionaryMemoryHashed pt(numScoreComponent, MemoryHashedText, NULL);
   pt.LoadText(inFilePath);
-  std::cerr << "Saving to " << outFilePath << ".mph" << std::endl;
-  pt.SaveBinary(outFilePath + ".mph");
+  std::cerr << "Saving to " << outFilePath << std::endl;
+  pt.SaveBinary(outFilePath);
 }
