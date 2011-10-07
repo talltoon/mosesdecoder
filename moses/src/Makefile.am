@@ -181,7 +181,7 @@ libmoses_la_SOURCES = \
 	ChartHypothesis.cpp \
 	ChartHypothesisCollection.cpp \
 	ChartManager.cpp \
-				ChartRuleLookupManager.cpp \
+	ChartRuleLookupManager.cpp \
         ChartRuleLookupManagerMemory.cpp \
         ChartRuleLookupManagerOnDisk.cpp \
         ChartTranslationOption.cpp \
@@ -236,6 +236,7 @@ libmoses_la_SOURCES = \
         LexicalReorderingState.cpp \
         LexicalReorderingTable.cpp \
         Manager.cpp \
+        MurmurHash3.cpp \
         NGramCollection.cpp \
         NGramNode.cpp \
         PCNTools.cpp \
@@ -245,6 +246,7 @@ libmoses_la_SOURCES = \
         PhraseDictionary.cpp \
         PhraseDictionaryDynSuffixArray.cpp \
         PhraseDictionaryMemory.cpp \
+        PhraseDictionaryMemoryHashed.cpp \
         PhraseDictionarySCFG.cpp \
         PhraseDictionaryNode.cpp \
         PhraseDictionaryNodeSCFG.cpp \

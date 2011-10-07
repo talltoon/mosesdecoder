@@ -48,10 +48,15 @@ void auxAppend(IPhrase& head, const IPhrase& tail)
 LexicalReorderingTable* LexicalReorderingTable::LoadAvailable(const std::string& filePath, const FactorList& f_factors, const FactorList& e_factors, const FactorList& c_factors)
 {
   //decide use Tree or Memory table
-  if(FileExists(filePath+".binlexr.idx")) {
+  if(FileExists(filePath+".mphlexr")) {
+    //there exists a binary version use that
+    return new LexicalReorderingTableMemoryHashed(filePath, f_factors, e_factors, c_factors);
+  }
+  else if(FileExists(filePath+".binlexr.idx")) {
     //there exists a binary version use that
     return new LexicalReorderingTableTree(filePath, f_factors, e_factors, c_factors);
-  } else {
+  } 
+  else {
     //use plain memory
     return new LexicalReorderingTableMemory(filePath, f_factors, e_factors, c_factors);
   }
@@ -208,6 +213,248 @@ void  LexicalReorderingTableMemory::LoadFromFile(const std::string& filePath)
 }
 
 /*
+ * functions for LexicalReorderingTableMemoryHashed
+ */
+LexicalReorderingTableMemoryHashed::LexicalReorderingTableMemoryHashed(
+  const std::string& filePath,
+  const std::vector<FactorType>& f_factors,
+  const std::vector<FactorType>& e_factors,
+  const std::vector<FactorType>& c_factors)
+  : LexicalReorderingTable(f_factors, e_factors, c_factors), m_tree(0)
+{
+  LoadBinary(filePath);
+}
+
+LexicalReorderingTableMemoryHashed::LexicalReorderingTableMemoryHashed(
+  const std::vector<FactorType>& f_factors,
+  const std::vector<FactorType>& e_factors,
+  const std::vector<FactorType>& c_factors)
+  : LexicalReorderingTable(f_factors, e_factors, c_factors), m_tree(0)
+{}
+
+LexicalReorderingTableMemoryHashed::~LexicalReorderingTableMemoryHashed() {
+  if(m_tree)
+    delete m_tree;
+}
+
+//std::vector<float> LexicalReorderingTableMemoryHashed::UnpackScores(std::string& scoreString) {
+//  std::stringstream ss(scoreString);
+//  std::vector<float> p;
+//  
+//  float score;
+//  while(ss.read((char*) &score, sizeof(score))) {
+//    p.push_back(score);
+//  }
+//  std::transform(p.begin(),p.end(),p.begin(),TransformScore);
+//  std::transform(p.begin(),p.end(),p.begin(),FloorScore);
+//  
+//  return p;
+//}
+
+std::vector<float> LexicalReorderingTableMemoryHashed::GetScore(const Phrase& f,
+    const Phrase& e,
+    const Phrase& c)
+{
+  std::string key;
+  Scores scores;
+  size_t num_scores = 6;
+  
+  if(0 == c.GetSize()) {
+    key = MakeKey(f,e,c);
+    size_t index = m_hash[key];
+    if(m_hash.GetSize() != index) {
+      std::string scoresString = m_scores[index];
+      m_tree->decode(num_scores, scoresString.begin(), scoresString.end(), std::back_inserter(scores));
+      return scores;
+    }
+  } else {
+    //right try from large to smaller context
+    for(size_t i = 0; i <= c.GetSize(); ++i) {
+      Phrase sub_c(c.GetSubString(WordsRange(i,c.GetSize()-1)));
+      key = MakeKey(f,e,sub_c);
+      size_t index = m_hash[key];
+      if(m_hash.GetSize() != index) {
+        std::string scoresString = m_scores[index];
+        m_tree->decode(num_scores, scoresString.begin(), scoresString.end(), std::back_inserter(scores));
+        return scores;
+      }
+    }
+  }
+  return Scores();
+}
+
+std::string  LexicalReorderingTableMemoryHashed::MakeKey(const Phrase& f,
+    const Phrase& e,
+    const Phrase& c) const
+{
+  /*
+  std::string key;
+  if(!m_FactorsF.empty()){
+    key += f.GetStringRep(m_FactorsF);
+  }
+  if(!m_FactorsE.empty()){
+    if(!key.empty()){
+      key += " ||| ";
+    }
+    key += e.GetStringRep(m_FactorsE);
+  }
+  */
+  return MakeKey(auxClearString(f.GetStringRep(m_FactorsF)),
+                 auxClearString(e.GetStringRep(m_FactorsE)),
+                 auxClearString(c.GetStringRep(m_FactorsC)));
+}
+
+std::string  LexicalReorderingTableMemoryHashed::MakeKey(const std::string& f,
+    const std::string& e,
+    const std::string& c) const
+{
+  std::string key;
+  if(!f.empty()) {
+    key += f;
+  }
+  if(!m_FactorsE.empty()) {
+    if(!key.empty()) {
+      key += "|||";
+    }
+    key += e;
+  }
+  if(!m_FactorsC.empty()) {
+    if(!key.empty()) {
+      key += "|||";
+    }
+    key += c;
+  }
+  return key;
+}
+
+void  LexicalReorderingTableMemoryHashed::LoadText(const std::string& filePath)
+{
+  std::vector<char*> tempScores;
+  std::map<float, size_t> frequencies;
+  
+  std::cerr << "Reading in reordering table ";
+  
+  std::string fileName = filePath;
+  if(!FileExists(fileName) && FileExists(fileName+".gz")) {
+    fileName += ".gz";
+  }
+  InputFileStream file(fileName);
+  std::string line(""), key("");
+  int numScores = -1;
+  size_t line_num = 0;
+  while(!getline(file, line).eof()) {
+    ++line_num;
+    if(line_num % 100000 == 0)
+      std::cerr << ".";
+    if(line_num % 1000000 == 0)
+      std::cerr << "[" << line_num << "]";
+      
+    std::vector<std::string> tokens = TokenizeMultiCharSeparator(line, "|||");
+    int t = 0 ;
+    std::string f(""),e(""),c("");
+
+    if(!m_FactorsF.empty()) {
+      //there should be something for f
+      f = auxClearString(tokens.at(t));
+      ++t;
+    }
+    if(!m_FactorsE.empty()) {
+      //there should be something for e
+      e = auxClearString(tokens.at(t));
+      ++t;
+    }
+    if(!m_FactorsC.empty()) {
+      //there should be something for c
+      c = auxClearString(tokens.at(t));
+      ++t;
+    }
+    //last token are the probs
+    std::vector<float> p = Scan<float>(Tokenize(tokens.at(t)));
+    //sanity check: all lines must have equall number of probs
+    if(-1 == numScores) {
+      numScores = (int)p.size(); //set in first line
+    }
+    if((int)p.size() != numScores) {
+      TRACE_ERR( "found inconsistent number of probabilities... found " << p.size() << " expected " << numScores << std::endl);
+      exit(0);
+    }
+        
+    m_hash.AddKey(MakeKey(f,e,c));
+    std::transform(p.begin(), p.end(), p.begin(), TransformScore);
+    std::transform(p.begin(), p.end(), p.begin(), FloorScore);
+    
+    for(std::vector<float>::iterator it = p.begin(); it != p.end(); it++)
+      frequencies[*it]++;
+    
+    char* cstring = new char[numScores * sizeof(float)];
+    std::memcpy(cstring, &p[0], numScores * sizeof(float));
+    tempScores.push_back(cstring);
+  }
+  std::cerr << std::endl;
+  
+  std::cerr << "Creating Huffman compression tree for " << frequencies.size() << " symbols" << std::endl;
+  m_tree = new Hufftree<float, size_t>(frequencies.begin(), frequencies.end());
+  
+  double freq_sum = 0, len_sum = 0;
+  for(std::map<float, size_t>::iterator it = frequencies.begin(); it != frequencies.end(); it++) {
+    len_sum  += it->second * m_tree->encode(it->first).size();
+    freq_sum += it->second;
+  }
+  std::cerr << "Average no. of bytes per encoded (decoded) symbol: " << (len_sum/freq_sum)/8
+            << " (" << sizeof(float) << ")" << std::endl;
+  
+  m_hash.Create();
+  
+  std::cerr << "Mapping hash values ";
+  std::vector<size_t> map(m_hash.GetSize());
+  for(size_t i = 0; i < m_hash.GetSize(); i++) {
+    if((i+1) % 100000 == 0)
+      std::cerr << ".";
+    if((i+1) % 1000000 == 0)
+      std::cerr << "[" << i+1 << "]";
+    size_t j = m_hash.GetHashByIndex(i);
+    if(j != m_hash.GetSize())
+        map[j] = i;
+  }
+  m_hash.ClearKeys();
+  std::cerr << std::endl;
+  
+  std::cerr << "Reordering and compressing target phrases ";
+  for(size_t i = 0; i < m_hash.GetSize(); i++) {
+    if((i+1) % 100000 == 0)
+      std::cerr << ".";
+    if((i+1) % 1000000 == 0)
+      std::cerr << "[" << i+1 << "]";
+      
+    std::vector<float> p(numScores, 0);
+    char* cstring = tempScores[map[i]];
+    std::memcpy(&p[0], cstring, numScores * sizeof(float));
+    delete[] cstring;
+    
+    std::string compressedScores = m_tree->encode(p.begin(), p.end());
+    m_scores.push_back(compressedScores);
+  }
+  std::cerr << std::endl;
+}
+
+void LexicalReorderingTableMemoryHashed::LoadBinary(const std::string& filePath) {
+  std::string file = filePath + ".mphlexr";
+  std::FILE* pFile = std::fopen(file.c_str() , "r");
+  m_tree = new Hufftree<float, size_t>(pFile);
+  m_hash.Load(pFile);
+  m_scores.load(pFile);
+  std::fclose(pFile);
+}
+
+void LexicalReorderingTableMemoryHashed::SaveBinary(const std::string& filePath) {
+  std::FILE* pFile = std::fopen(filePath.c_str() , "w");
+  m_tree->Save(pFile);
+  m_hash.Save(pFile);
+  m_scores.save(pFile);
+  std::fclose(pFile);
+}
+
+/*
  * functions for LexicalReorderingTableTree
  */
 LexicalReorderingTableTree::LexicalReorderingTableTree(
@@ -221,9 +468,7 @@ LexicalReorderingTableTree::LexicalReorderingTableTree(
   m_Table->Read(m_FilePath+".binlexr");
 }
 
-LexicalReorderingTableTree::~LexicalReorderingTableTree()
-{
-}
+LexicalReorderingTableTree::~LexicalReorderingTableTree() {}
 
 Scores LexicalReorderingTableTree::GetScore(const Phrase& f, const Phrase& e, const Phrase& c)
 {

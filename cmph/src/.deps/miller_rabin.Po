@@ -1,0 +1,5 @@
+miller_rabin.o: miller_rabin.c miller_rabin.h cmph_types.h
+
+miller_rabin.h:
+
+cmph_types.h:

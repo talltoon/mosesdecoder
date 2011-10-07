@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "PhraseDictionaryTreeAdaptor.h"
 #include "PhraseDictionarySCFG.h"
 #include "PhraseDictionaryOnDisk.h"
+#include "PhraseDictionaryMemoryHashed.h"
 #ifndef WIN32
 #include "PhraseDictionaryDynSuffixArray.h"
 #endif
@@ -66,7 +67,8 @@ PhraseDictionaryFeature::PhraseDictionaryFeature
 {
   const StaticData& staticData = StaticData::Instance();
   const_cast<ScoreIndexManager&>(staticData.GetScoreIndexManager()).AddScoreProducer(this);
-  if (implementation == Memory || implementation == SCFG || implementation == SuffixArray) {
+  if (implementation == Memory || implementation == SCFG || implementation == SuffixArray
+      || implementation == MemoryHashedText || implementation == MemoryHashedBinary) {
     m_useThreadSafePhraseDictionary = true;
   } else {
     m_useThreadSafePhraseDictionary = false;
@@ -110,7 +112,48 @@ PhraseDictionary* PhraseDictionaryFeature::LoadPhraseTable(const TranslationSyst
                          , system->GetWeightWordPenalty());
     assert(ret);
     return pdm;
-  } else if (m_implementation == Binary) {
+  }
+  else if (m_implementation == MemoryHashedText) {
+    // memory phrase table
+    VERBOSE(2,"using hashed tables" << std::endl);
+    if (!FileExists(m_filePath) && FileExists(m_filePath + ".gz")) {
+      m_filePath += ".gz";
+      VERBOSE(2,"Using gzipped file" << std::endl);
+    }
+    if (staticData.GetInputType() != SentenceInput) {
+      UserMessage::Add("Must use binary phrase table for this input type");
+      assert(false);
+    }
+
+    PhraseDictionaryMemoryHashed* pdm  = new PhraseDictionaryMemoryHashed(m_numScoreComponent, m_implementation, this);
+    bool ret = pdm->Load(GetInput(), GetOutput()
+                         , m_filePath
+                         , m_weight
+                         , m_tableLimit
+                         , system->GetLanguageModels()
+                         , system->GetWeightWordPenalty());
+    assert(ret);
+    return pdm;
+  }
+  else if (m_implementation == MemoryHashedBinary) {
+    // memory phrase table
+    VERBOSE(2,"using hashed tables" << std::endl);
+    if (staticData.GetInputType() != SentenceInput) {
+      UserMessage::Add("Must use binary phrase table for this input type");
+      assert(false);
+    }
+
+    PhraseDictionaryMemoryHashed* pdm  = new PhraseDictionaryMemoryHashed(m_numScoreComponent, m_implementation, this);
+    bool ret = pdm->Load(GetInput(), GetOutput()
+                         , m_filePath
+                         , m_weight
+                         , m_tableLimit
+                         , system->GetLanguageModels()
+                         , system->GetWeightWordPenalty());
+    assert(ret);
+    return pdm;
+  }
+  else if (m_implementation == Binary) {
     PhraseDictionaryTreeAdaptor* pdta = new PhraseDictionaryTreeAdaptor(m_numScoreComponent, m_numInputScores,this);
     bool ret = pdta->Load(                    GetInput()
                , GetOutput()

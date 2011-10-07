@@ -19,6 +19,9 @@
 #include "ConfusionNet.h"
 #include "Sentence.h"
 #include "PrefixTreeMap.h"
+#include "HashIndex.h"
+#include "StringVector.h"
+#include "Huffman.h"
 
 namespace Moses
 {
@@ -92,6 +95,35 @@ private:
   TableType m_Table;
 };
 
+class LexicalReorderingTableMemoryHashed : public LexicalReorderingTable
+{
+public:
+  LexicalReorderingTableMemoryHashed( const std::string& filePath,
+                                const std::vector<FactorType>& f_factors,
+                                const std::vector<FactorType>& e_factors,
+                                const std::vector<FactorType>& c_factors);
+  
+  LexicalReorderingTableMemoryHashed(
+                                const std::vector<FactorType>& f_factors,
+                                const std::vector<FactorType>& e_factors,
+                                const std::vector<FactorType>& c_factors);
+  
+  virtual ~LexicalReorderingTableMemoryHashed();
+public:
+  virtual std::vector<float> GetScore(const Phrase& f, const Phrase& e, const Phrase& c);
+  void LoadText(const std::string& filePath);
+  void LoadBinary(const std::string& filePath);
+  void SaveBinary(const std::string& filePath);
+  
+private:
+  std::string MakeKey(const Phrase& f, const Phrase& e, const Phrase& c) const;
+  std::string MakeKey(const std::string& f, const std::string& e, const std::string& c) const;
+    
+  HashIndex m_hash;
+  Hufftree<float, size_t>* m_tree;
+  StringVector<unsigned char, unsigned long> m_scores;
+};
+
 class LexicalReorderingTableTree : public LexicalReorderingTable
 {
   //implements LexicalReorderingTable using the crafty PDT code...
@@ -100,6 +132,7 @@ public:
                              const std::vector<FactorType>& f_factors,
                              const std::vector<FactorType>& e_factors,
                              const std::vector<FactorType>& c_factors);
+  
   ~LexicalReorderingTableTree();
 public:
   bool IsCacheEnabled() const {
