@@ -5,8 +5,6 @@
 
 #include <functional>
 #include <string>
-
-#include <inttypes.h>
 #include <string.h>
 
 namespace util {

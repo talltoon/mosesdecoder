@@ -5,6 +5,7 @@
 
 #include "lm/lm_exception.hh"
 #include "util/mmap.hh"
+#include "util/portability.hh"
 
 /* Configuration for ngram model.  Separate header to reduce pollution. */
 

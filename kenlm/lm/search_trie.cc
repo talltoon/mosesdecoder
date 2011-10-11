@@ -16,6 +16,7 @@
 #include "util/proxy_iterator.hh"
 #include "util/scoped.hh"
 #include "util/sized_iterator.hh"
+#include "util/portability.hh"
 
 #include <algorithm>
 #include <cstring>
@@ -24,10 +25,6 @@
 #include <limits>
 #include <numeric>
 #include <vector>
-
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 
 namespace lm {
 namespace ngram {

@@ -1,18 +1,7 @@
 #ifndef UTIL_BIT_PACKING__
 #define UTIL_BIT_PACKING__
 
-/* Bit-level packing routines */
-
-#include <assert.h>
-#ifdef __APPLE__
-#include <architecture/byte_order.h>
-#elif __linux__
-#include <endian.h>
-#else
-#include <arpa/nameser_compat.h>
-#endif 
-
-#include <inttypes.h>
+#include "util/portability.hh"
 
 namespace util {
 

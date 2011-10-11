@@ -8,7 +8,6 @@
 
 #include <ctype.h>
 #include <string.h>
-#include <inttypes.h>
 
 namespace lm {
 

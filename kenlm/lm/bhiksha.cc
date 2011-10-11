@@ -1,5 +1,6 @@
 #include "lm/bhiksha.hh"
 #include "lm/config.hh"
+#include "util/portability.hh"
 
 #include <limits>
 

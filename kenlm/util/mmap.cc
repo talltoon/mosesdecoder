@@ -6,10 +6,7 @@
 
 #include <assert.h>
 #include <fcntl.h>
-#include <sys/types.h>
-#include <sys/mman.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include "util/portability.hh"
 
 namespace util {
 
@@ -52,7 +49,7 @@ void scoped_memory::call_realloc(std::size_t size) {
   }
 }
 
-void *MapOrThrow(std::size_t size, bool for_write, int flags, bool prefault, int fd, off_t offset) {
+void *MapOrThrow(std::size_t size, bool for_write, int flags, bool prefault, int fd, OFF_T offset) {
 #ifdef MAP_POPULATE // Linux specific
   if (prefault) {
     flags |= MAP_POPULATE;
@@ -74,7 +71,7 @@ const int kFileFlags =
 #endif
   ;
 
-void MapRead(LoadMethod method, int fd, off_t offset, std::size_t size, scoped_memory &out) {
+void MapRead(LoadMethod method, int fd, OFF_T offset, std::size_t size, scoped_memory &out) {
   switch (method) {
     case LAZY:
       out.reset(MapOrThrow(size, false, kFileFlags, false, fd, offset), size, scoped_memory::MMAP_ALLOCATED);

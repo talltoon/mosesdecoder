@@ -7,8 +7,6 @@
 #include <cstddef>
 #include <cstring>
 
-#include <inttypes.h>
-
 namespace util {
 
 template <class Key, class Value> struct Entry {

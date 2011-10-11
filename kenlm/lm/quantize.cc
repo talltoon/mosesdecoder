@@ -1,12 +1,10 @@
-#include "lm/quantize.hh"
-
-#include "lm/binary_format.hh"
-#include "lm/lm_exception.hh"
-
 #include <algorithm>
 #include <numeric>
 
-#include <unistd.h>
+#include "lm/quantize.hh"
+#include "lm/binary_format.hh"
+#include "lm/lm_exception.hh"
+#include "util/portability.hh"
 
 namespace lm {
 namespace ngram {

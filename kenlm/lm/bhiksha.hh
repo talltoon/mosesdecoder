@@ -10,7 +10,6 @@
  *  Currently only used for next pointers.  
  */
 
-#include <inttypes.h>
 #include <assert.h>
 
 #include "lm/model_type.hh"

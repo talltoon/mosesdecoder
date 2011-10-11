@@ -2,9 +2,8 @@
 #define LM_BLANK__
 
 #include <limits>
-
-#include <inttypes.h>
 #include <math.h>
+#include "util/portability.hh"
 
 namespace lm {
 namespace ngram {

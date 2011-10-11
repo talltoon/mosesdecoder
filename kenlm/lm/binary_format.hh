@@ -12,8 +12,6 @@
 #include <cstddef>
 #include <vector>
 
-#include <inttypes.h>
-
 namespace lm {
 namespace ngram {
 
@@ -53,9 +51,9 @@ struct Backing {
   util::scoped_memory search;
 };
 
-void SeekOrThrow(int fd, off_t off);
+void SeekOrThrow(int fd, OFF_T off);
 // Seek forward
-void AdvanceOrThrow(int fd, off_t off);
+void AdvanceOrThrow(int fd, OFF_T off);
 
 // Create just enough of a binary file to write vocabulary to it.  
 uint8_t *SetupJustVocab(const Config &config, uint8_t order, std::size_t memory_size, Backing &backing);

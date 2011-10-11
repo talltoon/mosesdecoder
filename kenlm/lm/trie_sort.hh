@@ -11,8 +11,6 @@
 #include <string>
 #include <vector>
 
-#include <inttypes.h>
-
 namespace util { class FilePiece; }
 
 // Step of trie builder: create sorted files.  

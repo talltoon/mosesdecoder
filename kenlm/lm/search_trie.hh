@@ -29,9 +29,9 @@ template <class Quant, class Bhiksha> class TrieSearch {
     typedef ::lm::ngram::trie::Unigram Unigram;
     Unigram unigram;
 
-    typedef trie::BitPackedMiddle<typename Quant::Middle, Bhiksha> Middle;
+    typedef BitPackedMiddle<typename Quant::Middle, Bhiksha> Middle;
 
-    typedef trie::BitPackedLongest<typename Quant::Longest> Longest;
+    typedef BitPackedLongest<typename Quant::Longest> Longest;
     Longest longest;
 
     static const ModelType kModelType = static_cast<ModelType>(TRIE_SORTED + Quant::kModelTypeAdd + Bhiksha::kModelTypeAdd);

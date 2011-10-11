@@ -10,10 +10,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#include "util/portability.hh"
 
 namespace lm {
 namespace ngram {
@@ -74,12 +71,12 @@ void WriteHeader(void *to, const Parameters &params) {
 
 } // namespace
 
-void SeekOrThrow(int fd, off_t off) {
-  if ((off_t)-1 == lseek(fd, off, SEEK_SET)) UTIL_THROW(util::ErrnoException, "Seek failed");
+void SeekOrThrow(int fd, OFF_T off) {
+  if ((OFF_T)-1 == lseek(fd, off, SEEK_SET)) UTIL_THROW(util::ErrnoException, "Seek failed");
 }
 
-void AdvanceOrThrow(int fd, off_t off) {
-  if ((off_t)-1 == lseek(fd, off, SEEK_CUR)) UTIL_THROW(util::ErrnoException, "Seek failed");
+void AdvanceOrThrow(int fd, OFF_T off) {
+  if ((OFF_T)-1 == lseek(fd, off, SEEK_CUR)) UTIL_THROW(util::ErrnoException, "Seek failed");
 }
 
 uint8_t *SetupJustVocab(const Config &config, uint8_t order, std::size_t memory_size, Backing &backing) {
@@ -102,8 +99,8 @@ uint8_t *GrowForSearch(const Config &config, std::size_t vocab_pad, std::size_t 
       UTIL_THROW(util::ErrnoException, "ftruncate on " << config.write_mmap << " to " << (adjusted_vocab + memory_size) << " failed");
 
     // We're skipping over the header and vocab for the search space mmap.  mmap likes page aligned offsets, so some arithmetic to round the offset down.  
-    off_t page_size = sysconf(_SC_PAGE_SIZE);
-    off_t alignment_cruft = adjusted_vocab % page_size;
+    OFF_T page_size = sysconf(_SC_PAGE_SIZE);
+    OFF_T alignment_cruft = adjusted_vocab % page_size;
     backing.search.reset(util::MapOrThrow(alignment_cruft + memory_size, true, util::kFileFlags, false, backing.file.get(), adjusted_vocab - alignment_cruft), alignment_cruft + memory_size, util::scoped_memory::MMAP_ALLOCATED);
 
     return reinterpret_cast<uint8_t*>(backing.search.get()) + alignment_cruft;
@@ -132,8 +129,8 @@ void FinishFile(const Config &config, ModelType model_type, unsigned int search_
 namespace detail {
 
 bool IsBinaryFormat(int fd) {
-  const off_t size = util::SizeFile(fd);
-  if (size == util::kBadSize || (size <= static_cast<off_t>(sizeof(Sanity)))) return false;
+  const OFF_T size = util::SizeFile(fd);
+  if (size == util::kBadSize || (size <= static_cast<OFF_T>(sizeof(Sanity)))) return false;
   // Try reading the header.  
   util::scoped_memory memory;
   try {
@@ -183,7 +180,7 @@ void SeekPastHeader(int fd, const Parameters &params) {
 }
 
 uint8_t *SetupBinary(const Config &config, const Parameters &params, std::size_t memory_size, Backing &backing) {
-  const off_t file_size = util::SizeFile(backing.file.get());
+  const OFF_T file_size = util::SizeFile(backing.file.get());
   // The header is smaller than a page, so we have to map the whole header as well.  
   std::size_t total_map = TotalHeaderSize(params.counts.size()) + memory_size;
   if (file_size != util::kBadSize && static_cast<uint64_t>(file_size) < total_map)

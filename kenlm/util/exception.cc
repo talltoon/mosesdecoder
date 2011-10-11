@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <string.h>
+#include "util/portability.hh"
 
 namespace util {
 

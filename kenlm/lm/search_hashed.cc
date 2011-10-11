@@ -87,8 +87,8 @@ template <class Voc, class Store, class Middle, class Activate> void ReadNGrams(
   ReadNGramHeader(f, n);
 
   // vocab ids of words in reverse order
-  WordIndex vocab_ids[n];
-  uint64_t keys[n - 1];
+  WordIndex *vocab_ids = (WordIndex*) malloc(sizeof(WordIndex) * n);
+  uint64_t *keys = (uint64_t*) malloc(sizeof(uint64_t) * (n - 1));
   typename Store::Packing::Value value;
   typename Middle::MutableIterator found;
   for (size_t i = 0; i < count; ++i) {
@@ -125,6 +125,9 @@ template <class Voc, class Store, class Middle, class Activate> void ReadNGrams(
   }
 
   store.FinishedInserting();
+
+  free(vocab_ids);
+  free(keys);
 }
 
 } // namespace

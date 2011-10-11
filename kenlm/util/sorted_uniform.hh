@@ -3,9 +3,8 @@
 
 #include <algorithm>
 #include <cstddef>
-
 #include <assert.h>
-#include <inttypes.h>
+#include "util/portability.hh"
 
 namespace util {
 

@@ -6,11 +6,8 @@
 #include <cstdio>
 #include <iostream>
 
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h>
-#include <inttypes.h>
+#include "util/portability.hh"
 
 namespace util {
 
@@ -40,8 +37,9 @@ int CreateOrThrow(const char *name) {
   return ret;
 }
 
-off_t SizeFile(int fd) {
+OFF_T SizeFile(int fd) {
   struct stat sb;
+  fstat(fd, &sb);
   if (fstat(fd, &sb) == -1 || (!sb.st_size && !S_ISREG(sb.st_mode))) return kBadSize;
   return sb.st_size;
 }

@@ -11,10 +11,7 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <stdlib.h>
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#include "util/portability.hh"
 
 #ifdef HAVE_ZLIB
 #include <zlib.h>
@@ -36,13 +33,13 @@ GZException::GZException(void *file) {
 // Sigh this is the only way I could come up with to do a _const_ bool.  It has ' ', '\f', '\n', '\r', '\t', and '\v' (same as isspace on C locale). 
 const bool kSpaces[256] = {0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
-FilePiece::FilePiece(const char *name, std::ostream *show_progress, off_t min_buffer) : 
+FilePiece::FilePiece(const char *name, std::ostream *show_progress, OFF_T min_buffer) : 
   file_(OpenReadOrThrow(name)), total_size_(SizeFile(file_.get())), page_(sysconf(_SC_PAGE_SIZE)),
   progress_(total_size_ == kBadSize ? NULL : show_progress, std::string("Reading ") + name, total_size_) {
   Initialize(name, show_progress, min_buffer);
 }
 
-FilePiece::FilePiece(int fd, const char *name, std::ostream *show_progress, off_t min_buffer)  : 
+FilePiece::FilePiece(int fd, const char *name, std::ostream *show_progress, OFF_T min_buffer)  : 
   file_(fd), total_size_(SizeFile(file_.get())), page_(sysconf(_SC_PAGE_SIZE)),
   progress_(total_size_ == kBadSize ? NULL : show_progress, std::string("Reading ") + name, total_size_) {
   Initialize(name, show_progress, min_buffer);
@@ -94,13 +91,13 @@ unsigned long int FilePiece::ReadULong() {
   return ReadNumber<unsigned long int>();
 }
 
-void FilePiece::Initialize(const char *name, std::ostream *show_progress, off_t min_buffer)  {
+void FilePiece::Initialize(const char *name, std::ostream *show_progress, OFF_T min_buffer)  {
 #ifdef HAVE_ZLIB
   gz_file_ = NULL;
 #endif
   file_name_ = name;
 
-  default_map_size_ = page_ * std::max<off_t>((min_buffer / page_ + 1), 2);
+  default_map_size_ = page_ * std::max<OFF_T>((min_buffer / page_ + 1), 2);
   position_ = NULL;
   position_end_ = NULL;
   mapped_offset_ = 0;
@@ -190,7 +187,7 @@ void FilePiece::Shift() {
     progress_.Finished();
     throw EndOfFileException();
   }
-  off_t desired_begin = position_ - data_.begin() + mapped_offset_;
+  OFF_T desired_begin = position_ - data_.begin() + mapped_offset_;
 
   if (!fallback_to_read_) MMapShift(desired_begin);
   // Notice an mmap failure might set the fallback.  
@@ -201,17 +198,17 @@ void FilePiece::Shift() {
   }
 }
 
-void FilePiece::MMapShift(off_t desired_begin) {
+void FilePiece::MMapShift(OFF_T desired_begin) {
   // Use mmap.  
-  off_t ignore = desired_begin % page_;
+  OFF_T ignore = desired_begin % page_;
   // Duplicate request for Shift means give more data.  
   if (position_ == data_.begin() + ignore) {
     default_map_size_ *= 2;
   }
   // Local version so that in case of failure it doesn't overwrite the class variable.  
-  off_t mapped_offset = desired_begin - ignore;
+  OFF_T mapped_offset = desired_begin - ignore;
 
-  off_t mapped_size;
+  OFF_T mapped_size;
   if (default_map_size_ >= static_cast<size_t>(total_size_ - mapped_offset)) {
     at_end_ = true;
     mapped_size = total_size_ - mapped_offset;
@@ -229,7 +226,7 @@ void FilePiece::MMapShift(off_t desired_begin) {
         , *file_, mapped_offset), mapped_size, scoped_memory::MMAP_ALLOCATED);
   if (data_.get() == MAP_FAILED) {
     if (desired_begin) {
-      if (((off_t)-1) == lseek(*file_, desired_begin, SEEK_SET)) UTIL_THROW(ErrnoException, "mmap failed even though it worked before.  lseek failed too, so using read isn't an option either.");
+      if (((OFF_T)-1) == lseek(*file_, desired_begin, SEEK_SET)) UTIL_THROW(ErrnoException, "mmap failed even though it worked before.  lseek failed too, so using read isn't an option either.");
     }
     // The mmap was scheduled to end the file, but now we're going to read it.  
     at_end_ = false;
@@ -297,7 +294,7 @@ void FilePiece::ReadShift() {
   if (read_return == -1) throw GZException(gz_file_);
   if (total_size_ != kBadSize) {
     // Just get the position, don't actually seek.  Apparently this is how you do it. . . 
-    off_t ret = lseek(file_.get(), 0, SEEK_CUR);
+    OFF_T ret = lseek(file_.get(), 0, SEEK_CUR);
     if (ret != -1) progress_.Set(ret);
   }
 #else

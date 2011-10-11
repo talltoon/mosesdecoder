@@ -1,12 +1,10 @@
 #ifndef LM_TRIE__
 #define LM_TRIE__
 
-#include <inttypes.h>
-
 #include <cstddef>
-
 #include "lm/word_index.hh"
 #include "lm/weights.hh"
+#include "util/portability.hh"
 
 namespace lm {
 namespace ngram {

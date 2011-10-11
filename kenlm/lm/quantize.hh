@@ -5,12 +5,10 @@
 #include "lm/config.hh"
 #include "lm/model_type.hh"
 #include "util/bit_packing.hh"
+#include "util/portability.hh"
 
 #include <algorithm>
 #include <vector>
-
-#include <inttypes.h>
-
 #include <iostream>
 
 namespace lm {

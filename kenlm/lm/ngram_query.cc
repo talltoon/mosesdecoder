@@ -8,8 +8,6 @@
 
 #include <ctype.h>
 
-#include <sys/resource.h>
-#include <sys/time.h>
 
 float FloatSec(const struct timeval &tv) {
   return static_cast<float>(tv.tv_sec) + (static_cast<float>(tv.tv_usec) / 1000000000.0);

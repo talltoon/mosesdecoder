@@ -33,9 +33,9 @@ extern const bool kSpaces[256];
 class FilePiece {
   public:
     // 32 MB default.
-    explicit FilePiece(const char *file, std::ostream *show_progress = NULL, off_t min_buffer = 33554432);
+    explicit FilePiece(const char *file, std::ostream *show_progress = NULL, OFF_T min_buffer = 33554432);
     // Takes ownership of fd.  name is used for messages.  
-    explicit FilePiece(int fd, const char *name, std::ostream *show_progress = NULL, off_t min_buffer = 33554432);
+    explicit FilePiece(int fd, const char *name, std::ostream *show_progress = NULL, OFF_T min_buffer = 33554432);
 
     ~FilePiece();
      
@@ -70,14 +70,14 @@ class FilePiece {
       }
     }
 
-    off_t Offset() const {
+    OFF_T Offset() const {
       return position_ - data_.begin() + mapped_offset_;
     }
 
     const std::string &FileName() const { return file_name_; }
     
   private:
-    void Initialize(const char *name, std::ostream *show_progress, off_t min_buffer);
+    void Initialize(const char *name, std::ostream *show_progress, OFF_T min_buffer);
 
     template <class T> T ReadNumber();
 
@@ -91,7 +91,7 @@ class FilePiece {
 
     void Shift();
     // Backends to Shift().
-    void MMapShift(off_t desired_begin);
+    void MMapShift(OFF_T desired_begin);
 
     void TransitionToRead();
     void ReadShift();
@@ -99,11 +99,11 @@ class FilePiece {
     const char *position_, *last_space_, *position_end_;
 
     scoped_fd file_;
-    const off_t total_size_;
-    const off_t page_;
+    const OFF_T total_size_;
+    const OFF_T page_;
 
     size_t default_map_size_;
-    off_t mapped_offset_;
+    OFF_T mapped_offset_;
 
     // Order matters: file_ should always be destroyed after this.
     scoped_memory data_;

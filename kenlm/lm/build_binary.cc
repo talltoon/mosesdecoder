@@ -8,7 +8,7 @@
 
 #include <math.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include "util/portability.hh"
 
 namespace lm {
 namespace ngram {

@@ -2,7 +2,7 @@
 #define UTIL_FILE__
 
 #include <cstdio>
-#include <unistd.h>
+#include "util/portability.hh"
 
 namespace util {
 
@@ -61,8 +61,8 @@ int OpenReadOrThrow(const char *name);
 int CreateOrThrow(const char *name);
 
 // Return value for SizeFile when it can't size properly.  
-const off_t kBadSize = -1;
-off_t SizeFile(int fd);
+const OFF_T kBadSize = -1;
+OFF_T SizeFile(int fd);
 
 void ReadOrThrow(int fd, void *to, std::size_t size);
 void WriteOrThrow(int fd, const void *data_void, std::size_t size);
