@@ -1,12 +1,13 @@
 #include "util/exception.hh"
 #include "util/file.hh"
 #include "util/mmap.hh"
+#include "util/portability.hh"
 
 #include <iostream>
 
 #include <assert.h>
 #include <fcntl.h>
-#include "util/portability.hh"
+#include <stdlib.h>
 
 namespace util {
 
