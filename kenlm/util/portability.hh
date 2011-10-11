@@ -6,9 +6,11 @@
 
 #ifdef WIN32
 
+#include <direct.h>
 #include <io.h>
 #include <stdio.h>
 #include <sys/stat.h>
+#include "util/getopt.h"
 
 typedef int ssize_t;
 
@@ -19,13 +21,7 @@ int sysconf(int);
 int msync(void*, int, int);
 int ftruncate(int, int);
 
-int lrint(int); 
-size_t log10(size_t);
-size_t ceil(size_t);
-int getopt(int, char**, char*);
-
-extern const char *optarg;
-extern int optind;
+//int lrint(int); 
 
 struct timeval 
 {
@@ -44,7 +40,6 @@ typedef int OFF_T;
 
 int S_ISDIR(int);
 int mkdtemp(const char*);
-int rmdir(const char*);
 int munmap(void *, int);
 void *mmap(void*, int, int, int, int, OFF_T);
 
@@ -65,10 +60,11 @@ int S_ISREG(int);
 
 const char *strerror_r(int, const char *buf, int);
 float strtof(const char *begin, char **end);
-FILE *popen(const char*, const char*);
-int pclose(FILE *);
+//FILE *popen(const char*, const char*);
+//int pclose(FILE *);
 
 #define dup(x) _dup(x)
+#define rmdir(x) _rmdir(x)
 
 #else // assume UNIX OS
 

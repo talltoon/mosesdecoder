@@ -1,0 +1,155 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{42D29D99-FC9A-4860-BD84-7148BEF1DBD3}</ProjectGuid>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <Keyword>ManagedCProj</Keyword>
+    <RootNamespace>kenlm</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CLRSupport>false</CLRSupport>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <CLRSupport>false</CLRSupport>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(ProjectDir);C:\Program Files\boost\boost_1_47;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Program Files\boost\boost_1_47\lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <IncludePath>$(ProjectDir);C:\Program Files\boost\boost_1_47;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Program Files\boost\boost_1_47\lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <AdditionalIncludeDirectories>C:\Users\Hieu\Desktop\kenlm\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>zlib.lib</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>zlib.lib</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="lm\bhiksha.cc" />
+    <ClCompile Include="lm\binary_format.cc" />
+    <ClCompile Include="lm\config.cc" />
+    <ClCompile Include="lm\left_test.cc" />
+    <ClCompile Include="lm\lm_exception.cc" />
+    <ClCompile Include="lm\model.cc" />
+    <ClCompile Include="lm\quantize.cc" />
+    <ClCompile Include="lm\read_arpa.cc" />
+    <ClCompile Include="lm\search_hashed.cc" />
+    <ClCompile Include="lm\search_trie.cc" />
+    <ClCompile Include="lm\trie.cc" />
+    <ClCompile Include="lm\trie_sort.cc" />
+    <ClCompile Include="lm\virtual_interface.cc" />
+    <ClCompile Include="lm\vocab.cc" />
+    <ClCompile Include="util\bit_packing.cc" />
+    <ClCompile Include="util\ersatz_progress.cc" />
+    <ClCompile Include="util\exception.cc" />
+    <ClCompile Include="util\file.cc" />
+    <ClCompile Include="util\file_piece.cc" />
+    <ClCompile Include="util\getopt.c" />
+    <ClCompile Include="util\mmap.cc" />
+    <ClCompile Include="util\murmur_hash.cc" />
+    <ClCompile Include="util\portability.cc" />
+    <ClCompile Include="util\string_piece.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="lm\bhiksha.hh" />
+    <None Include="lm\binary_format.hh" />
+    <None Include="lm\blank.hh" />
+    <None Include="lm\config.hh" />
+    <None Include="lm\enumerate_vocab.hh" />
+    <None Include="lm\facade.hh" />
+    <None Include="lm\left.hh" />
+    <None Include="lm\lm_exception.hh" />
+    <None Include="lm\max_order.hh" />
+    <None Include="lm\model.hh" />
+    <None Include="lm\model_type.hh" />
+    <None Include="lm\quantize.hh" />
+    <None Include="lm\read_arpa.hh" />
+    <None Include="lm\return.hh" />
+    <None Include="lm\search_hashed.hh" />
+    <None Include="lm\search_trie.hh" />
+    <None Include="lm\trie.hh" />
+    <None Include="lm\trie_sort.hh" />
+    <None Include="lm\virtual_interface.hh" />
+    <None Include="lm\vocab.hh" />
+    <None Include="lm\weights.hh" />
+    <None Include="lm\word_index.hh" />
+    <None Include="util\bit_packing.hh" />
+    <None Include="util\ersatz_progress.hh" />
+    <None Include="util\exception.hh" />
+    <None Include="util\file.hh" />
+    <None Include="util\file_piece.hh" />
+    <None Include="util\have.hh" />
+    <None Include="util\joint_sort.hh" />
+    <None Include="util\key_value_packing.hh" />
+    <None Include="util\mmap.hh" />
+    <None Include="util\murmur_hash.hh" />
+    <None Include="util\portability.hh" />
+    <None Include="util\probing_hash_table.hh" />
+    <None Include="util\proxy_iterator.hh" />
+    <None Include="util\scoped.hh" />
+    <None Include="util\sized_iterator.hh" />
+    <None Include="util\sorted_uniform.hh" />
+    <None Include="util\string_piece.hh" />
+    <None Include="util\tokenize_piece.hh" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="util\getopt.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
