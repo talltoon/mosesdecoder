@@ -12,7 +12,7 @@ int ftruncate(int, int) { return 0; }
 int munmap(void *, int) { return 0; }
 void *mmap(void*, int, int, int, int, OFF_T) { return 0; }
 int write(int, const void *, int) {return 0; }
-const char *strerror_r(int, const char *buf, int) { return ""; }
+
 //FILE *popen(const char*, const char*) { return 0; }
 //int pclose(FILE *) { return 0; }
 //int lrint(int)  { return 0;} 

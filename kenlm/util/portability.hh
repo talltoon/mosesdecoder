@@ -9,6 +9,7 @@
 #include <direct.h>
 #include <io.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/stat.h>
 #include "util/getopt.h"
 
@@ -38,7 +39,8 @@ struct rusage
 //inline int getrusage(int, struct rusage*) { return 0; }
 //extern int RUSAGE_SELF;
 
-typedef int OFF_T;
+typedef __int64 OFF_T;
+//#define OFF_T __int64
 
 int S_ISDIR(int);
 int mkdtemp(const char*);
@@ -60,13 +62,15 @@ int write(int, const void *, int);
 #define S_IWUSR 1
 int S_ISREG(int);
 
-const char *strerror_r(int, const char *buf, int);
+//const char *strerror_r(int, const char *buf, int);
+
 float strtof(const char *begin, char **end);
 //FILE *popen(const char*, const char*);
 //int pclose(FILE *);
 
 #define dup(x) _dup(x)
 #define rmdir(x) _rmdir(x)
+#define strerror_r(errNum, buffer, numberOfElements)  strerror_s(buffer, numberOfElements);
 
 #else // assume UNIX OS
 

@@ -69,6 +69,9 @@ ErrnoException::ErrnoException() throw() : errno_(errno) {
   buf[0] = 0;
 #ifdef sun
   const char *add = strerror(errno);
+#elif WIN32
+  errno_t errNo = strerror_r(errno, buf, 200);
+  const char *add = HandleStrerror(errNo, buf);
 #else
   const char *add = HandleStrerror(strerror_r(errno, buf, 200), buf);
 #endif
