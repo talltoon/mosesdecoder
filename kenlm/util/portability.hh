@@ -15,6 +15,8 @@
 
 typedef HANDLE FD;
 
+const FD kBadFD = INVALID_HANDLE_VALUE;
+
 typedef int ssize_t;
 
 #define _SC_PAGE_SIZE 1
@@ -85,6 +87,7 @@ float strtof(const char *begin, char **end);
 #include <unistd.h>
 
 typedef int FD;
+const FD kBadFD = -1;
 
 typedef off_t OFF_T;
 
