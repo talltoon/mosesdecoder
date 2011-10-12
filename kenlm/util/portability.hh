@@ -13,6 +13,8 @@
 #include <sys/stat.h>
 #include "util/getopt.h"
 
+typedef HANDLE FD;
+
 typedef int ssize_t;
 
 #define _SC_PAGE_SIZE 1
@@ -81,6 +83,8 @@ float strtof(const char *begin, char **end);
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+typedef int FD;
 
 typedef off_t OFF_T;
 
