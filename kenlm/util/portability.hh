@@ -23,6 +23,7 @@ int ftruncate(int, int);
 
 //int lrint(int); 
 
+/*
 struct timeval 
 {
 	float tv_sec, tv_usec;
@@ -32,8 +33,9 @@ struct rusage
 {
 	timeval ru_utime, ru_stime;
 };
+*/
 
-inline int getrusage(int, struct rusage*) { return 0; }
+//inline int getrusage(int, struct rusage*) { return 0; }
 //extern int RUSAGE_SELF;
 
 typedef int OFF_T;
