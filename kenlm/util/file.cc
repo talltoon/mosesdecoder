@@ -74,7 +74,11 @@ OFF_T SizeFile(FD fd) {
 #if WIN32
   LARGE_INTEGER size;
   BOOL ret = GetFileSizeEx(fd, &size);
-  return size;
+  
+  if (ret == 0) return kBadSize;
+  
+  OFF_T retSize = reinterpret_cast<OFF_T&>(size); // not sure about this
+  return retSize;
 
 #else
   struct stat sb;
@@ -86,6 +90,10 @@ OFF_T SizeFile(FD fd) {
 
 void ReadOrThrow(FD fd, void *to_void, std::size_t amount) {
   uint8_t *to = static_cast<uint8_t*>(to_void);
+
+#ifdef WIN32
+
+#else
   while (amount) {
     ssize_t ret = read(fd, to, amount);
     if (ret == -1) UTIL_THROW(ErrnoException, "Reading " << amount << " from fd " << fd << " failed.");
@@ -93,9 +101,13 @@ void ReadOrThrow(FD fd, void *to_void, std::size_t amount) {
     amount -= ret;
     to += ret;
   }
+#endif
 }
 
 void WriteOrThrow(FD fd, const void *data_void, std::size_t size) {
+#ifdef WIN32
+
+#else
   const uint8_t *data = static_cast<const uint8_t*>(data_void);
   while (size) {
     ssize_t ret = write(fd, data, size);
@@ -103,6 +115,7 @@ void WriteOrThrow(FD fd, const void *data_void, std::size_t size) {
     data += ret;
     size -= ret;
   }
+#endif
 }
 
 void RemoveOrThrow(const char *name) {
