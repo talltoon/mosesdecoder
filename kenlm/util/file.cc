@@ -92,23 +92,30 @@ void ReadOrThrow(FD fd, void *to_void, std::size_t amount) {
   uint8_t *to = static_cast<uint8_t*>(to_void);
 
 #ifdef WIN32
+  DWORD numberOfBytesRead;
+
+  BOOL ret = ReadFile(fd, to_void, amount, &numberOfBytesRead, NULL);
+  UTIL_THROW_IF(ret == FALSE, ErrnoException, "Reading " << amount << " from fd " << fd << " failed.");
 
 #else
   while (amount) {
     ssize_t ret = read(fd, to, amount);
     if (ret == -1) UTIL_THROW(ErrnoException, "Reading " << amount << " from fd " << fd << " failed.");
     if (ret == 0) UTIL_THROW(Exception, "Hit EOF in fd " << fd << " but there should be " << amount << " more bytes to read.");
-    amount -= ret;
+    amount -= ret ;
     to += ret;
   }
 #endif
 }
 
 void WriteOrThrow(FD fd, const void *data_void, std::size_t size) {
+  const uint8_t *data = static_cast<const uint8_t*>(data_void);
 #ifdef WIN32
+  DWORD numberOfBytesWritten;
+  BOOL ret = WriteFile(fd, data, size, &numberOfBytesWritten, NULL);
+  UTIL_THROW_IF(ret == FALSE, ErrnoException, "Write failed");
 
 #else
-  const uint8_t *data = static_cast<const uint8_t*>(data_void);
   while (size) {
     ssize_t ret = write(fd, data, size);
     if (ret < 1) UTIL_THROW(util::ErrnoException, "Write failed");
