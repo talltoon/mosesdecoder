@@ -12,10 +12,18 @@
 namespace util {
 
 scoped_fd::~scoped_fd() {
+#ifdef WIN32
+  BOOL ret = CloseHandle(fd_);
+  if (ret == 0) {
+    std::cerr << "Could not close file " << fd_ << std::endl;
+    std::abort();
+  }
+#else
   if (fd_ != -1 && close(fd_)) {
     std::cerr << "Could not close file " << fd_ << std::endl;
     std::abort();
   }
+#endif
 }
 
 scoped_FILE::~scoped_FILE() {
@@ -27,21 +35,53 @@ scoped_FILE::~scoped_FILE() {
 
 FD OpenReadOrThrow(const char *name) {
   FD ret;
+#ifdef WIN32
+  ret = CreateFileA(name,               // file to open
+                       GENERIC_READ,          // open for reading
+                       FILE_SHARE_READ,       // share for reading
+                       NULL,                  // default security
+                       OPEN_EXISTING,         // existing file only
+                       FILE_ATTRIBUTE_NORMAL, // normal file
+                       NULL);                 // no attr. template
+  UTIL_THROW_IF(ret == INVALID_HANDLE_VALUE, ErrnoException, "while opening " << name);
+
+#else
   UTIL_THROW_IF(-1 == (ret = open(name, O_RDONLY)), ErrnoException, "while opening " << name);
+#endif
   return ret;
 }
 
 FD CreateOrThrow(const char *name) {
   FD ret;
+#ifdef WIN32
+  ret = CreateFileA(name,                // name of the write
+                      GENERIC_WRITE,          // open for writing
+                      0,                      // do not share
+                      NULL,                   // default security
+                      CREATE_NEW,             // create new file only
+                      FILE_ATTRIBUTE_NORMAL,  // normal file
+                      NULL);                  // no attr. template
+  UTIL_THROW_IF(ret == INVALID_HANDLE_VALUE, ErrnoException, "while opening " << name);
+
+#else
   UTIL_THROW_IF(-1 == (ret = open(name, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR)), ErrnoException, "while creating " << name);
+#endif
+
   return ret;
 }
 
 OFF_T SizeFile(FD fd) {
+#if WIN32
+  LARGE_INTEGER size;
+  BOOL ret = GetFileSizeEx(fd, &size);
+  return size;
+
+#else
   struct stat sb;
   fstat(fd, &sb);
   if (fstat(fd, &sb) == -1 || (!sb.st_size && !S_ISREG(sb.st_mode))) return kBadSize;
   return sb.st_size;
+#endif
 }
 
 void ReadOrThrow(FD fd, void *to_void, std::size_t amount) {
