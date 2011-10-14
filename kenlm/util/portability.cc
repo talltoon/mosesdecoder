@@ -18,8 +18,6 @@ int write(int, const void *, int) {return 0; }
 //int lrint(int)  { return 0;} 
 
 // to be implemented by boost
-int S_ISDIR(int) { return 0; }
-int S_ISREG(int) { return 0; }
 int mkdtemp(const char*) { return 0; }
 
 // done

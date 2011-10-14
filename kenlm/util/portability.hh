@@ -6,6 +6,7 @@
 
 #ifdef WIN32
 
+#include <windows.h>
 #include <direct.h>
 #include <io.h>
 #include <stdio.h>
@@ -46,7 +47,14 @@ struct rusage
 typedef __int64 OFF_T;
 //#define OFF_T __int64
 
-int S_ISDIR(int);
+#ifndef S_ISDIR
+#define S_ISDIR(mode)  (((mode) & S_IFMT) == S_IFDIR)
+#endif
+
+#ifndef S_ISREG
+#define S_ISREG(mode)  (((mode) & S_IFMT) == S_IFREG)
+#endif
+
 int mkdtemp(const char*);
 int munmap(void *, int);
 void *mmap(void*, int, int, int, int, OFF_T);
@@ -64,7 +72,6 @@ void *mmap(void*, int, int, int, int, OFF_T);
 int write(int, const void *, int);
 #define S_IRUSR 1
 #define S_IWUSR 1
-int S_ISREG(int);
 
 //const char *strerror_r(int, const char *buf, int);
 

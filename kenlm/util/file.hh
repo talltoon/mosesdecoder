@@ -14,7 +14,7 @@ class scoped_fd {
 
     ~scoped_fd();
 
-    void reset(int to) {
+    void reset(FD to) {
       scoped_fd other(fd_);
       fd_ = to;
     }

@@ -26,18 +26,18 @@ scoped_FILE::~scoped_FILE() {
 }
 
 FD OpenReadOrThrow(const char *name) {
-  int ret;
+  FD ret;
   UTIL_THROW_IF(-1 == (ret = open(name, O_RDONLY)), ErrnoException, "while opening " << name);
   return ret;
 }
 
 FD CreateOrThrow(const char *name) {
-  int ret;
+  FD ret;
   UTIL_THROW_IF(-1 == (ret = open(name, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR)), ErrnoException, "while creating " << name);
   return ret;
 }
 
-OFF_T SizeFile(int fd) {
+OFF_T SizeFile(FD fd) {
   struct stat sb;
   fstat(fd, &sb);
   if (fstat(fd, &sb) == -1 || (!sb.st_size && !S_ISREG(sb.st_mode))) return kBadSize;
