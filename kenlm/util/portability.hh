@@ -57,7 +57,7 @@ typedef __int64 OFF_T;
 
 int mkdtemp(const char*);
 int munmap(void *, int);
-void *mmap(void*, int, int, int, int, OFF_T);
+void *mmap(void*, int, int, int, FD, OFF_T);
 
 #define PROT_READ 1
 #define PROT_WRITE 1

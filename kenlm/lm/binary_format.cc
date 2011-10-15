@@ -28,6 +28,8 @@ struct Sanity {
   WordIndex one_word_index, max_word_index;
   uint64_t one_uint64;
 
+#undef max
+
   void SetToReference() {
     std::memcpy(magic, kMagicBytes, sizeof(magic));
     zero_f = 0.0; one_f = 1.0; minus_half_f = -0.5;

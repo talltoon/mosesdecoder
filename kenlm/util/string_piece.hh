@@ -136,6 +136,7 @@ class StringPiece {
     length_ -= n;
   }
 
+#undef min
   int compare(const StringPiece& x) const {
     int r = wordmemcmp(ptr_, x.ptr_, std::min(length_, x.length_));
     if (r == 0) {
