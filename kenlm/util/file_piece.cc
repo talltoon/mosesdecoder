@@ -39,7 +39,7 @@ FilePiece::FilePiece(const char *name, std::ostream *show_progress, OFF_T min_bu
   Initialize(name, show_progress, min_buffer);
 }
 
-FilePiece::FilePiece(int fd, const char *name, std::ostream *show_progress, OFF_T min_buffer)  : 
+FilePiece::FilePiece(FD fd, const char *name, std::ostream *show_progress, OFF_T min_buffer)  : 
   file_(fd), total_size_(SizeFile(file_.get())), page_(sysconf(_SC_PAGE_SIZE)),
   progress_(total_size_ == kBadSize ? NULL : show_progress, std::string("Reading ") + name, total_size_) {
   Initialize(name, show_progress, min_buffer);
@@ -226,7 +226,16 @@ void FilePiece::MMapShift(OFF_T desired_begin) {
         , *file_, mapped_offset), mapped_size, scoped_memory::MMAP_ALLOCATED);
   if (data_.get() == MAP_FAILED) {
     if (desired_begin) {
-      if (((OFF_T)-1) == lseek(*file_, desired_begin, SEEK_SET)) UTIL_THROW(ErrnoException, "mmap failed even though it worked before.  lseek failed too, so using read isn't an option either.");
+	  #ifdef WIN32
+		LARGE_INTEGER offsetWin32 = reinterpret_cast<LARGE_INTEGER&>(desired_begin); // not sure if correct
+
+		DWORD ret = SetFilePointerEx(*file_, offsetWin32, NULL, FILE_BEGIN);
+		UTIL_THROW_IF(ret == FALSE, ErrnoException, "mmap failed even though it worked before.  lseek failed too, so using read isn't an option either.");
+
+	  #else
+		long ret = lseek(*file_, desired_begin, SEEK_SET);	  
+		if (((OFF_T)-1) == ret) UTIL_THROW(ErrnoException, "mmap failed even though it worked before.  lseek failed too, so using read isn't an option either.");
+	  #endif
     }
     // The mmap was scheduled to end the file, but now we're going to read it.  
     at_end_ = false;
@@ -298,9 +307,22 @@ void FilePiece::ReadShift() {
     if (ret != -1) progress_.Set(ret);
   }
 #else
-  read_return = read(file_.get(), static_cast<char*>(data_.get()) + already_read, default_map_size_ - already_read);
-  UTIL_THROW_IF(read_return == -1, ErrnoException, "read failed");
-  progress_.Set(mapped_offset_);
+
+  #ifdef WIN32
+	  FD fd = file_.get();
+	  void *mem = static_cast<char*>(data_.get()) + already_read;
+	  DWORD numBytesToRead = default_map_size_ - already_read;
+	  DWORD numberOfBytesRead;
+
+	  BOOL ret = ReadFile(fd, mem, numBytesToRead, &numberOfBytesRead, NULL);
+	  UTIL_THROW_IF(ret == FALSE, ErrnoException, "read failed");
+  #else
+	
+	  read_return = read(file_.get(), static_cast<char*>(data_.get()) + already_read, default_map_size_ - already_read);
+	  UTIL_THROW_IF(read_return == -1, ErrnoException, "read failed");
+  #endif
+
+	  progress_.Set(mapped_offset_);
 #endif
   if (read_return == 0) {
     at_end_ = true;

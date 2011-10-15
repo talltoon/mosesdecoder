@@ -28,8 +28,6 @@ struct Sanity {
   WordIndex one_word_index, max_word_index;
   uint64_t one_uint64;
 
-#undef max
-
   void SetToReference() {
     std::memcpy(magic, kMagicBytes, sizeof(magic));
     zero_f = 0.0; one_f = 1.0; minus_half_f = -0.5;
@@ -45,15 +43,23 @@ std::size_t TotalHeaderSize(unsigned char order) {
   return Align8(sizeof(Sanity) + sizeof(FixedWidthParameters) + sizeof(uint64_t) * order);
 }
 
-void ReadLoop(int fd, void *to_void, std::size_t size) {
+void ReadLoop(FD fd, void *to_void, std::size_t size) {
   uint8_t *to = static_cast<uint8_t*>(to_void);
+
+#ifdef WIN32
+  DWORD numberOfBytesRead;
+
+  BOOL ret = ReadFile(fd, to_void, size, &numberOfBytesRead, NULL);
+  UTIL_THROW_IF(ret == FALSE, util::ErrnoException, "Reading " << size << " from fd " << fd << " failed.");
+#else
   while (size) {
-    ssize_t ret = read(fd, to, size);
+	ssize_t ret = read(fd, to, size);
     if (ret == -1) UTIL_THROW(util::ErrnoException, "Failed to read from binary file");
     if (ret == 0) UTIL_THROW(util::ErrnoException, "Binary file too short");
     to += ret;
     size -= ret;
   }
+#endif
 }
 
 void WriteHeader(void *to, const Parameters &params) {
@@ -73,13 +79,24 @@ void WriteHeader(void *to, const Parameters &params) {
 
 } // namespace
 
-void SeekOrThrow(int fd, OFF_T off) {
+void SeekOrThrow(FD fd, OFF_T off) {
+#ifdef WIN32
+  LARGE_INTEGER offsetWin32 = reinterpret_cast<LARGE_INTEGER&>(off); // not sure if correct
+
+  DWORD ret = SetFilePointerEx(fd, offsetWin32, NULL, FILE_BEGIN);
+  UTIL_THROW_IF(ret == FALSE, util::ErrnoException, "lseek to " << off << " in fd " << fd << " failed.");
+
+#else
   if ((OFF_T)-1 == lseek(fd, off, SEEK_SET)) UTIL_THROW(util::ErrnoException, "Seek failed");
+
+#endif
 }
 
+/*
 void AdvanceOrThrow(int fd, OFF_T off) {
   if ((OFF_T)-1 == lseek(fd, off, SEEK_CUR)) UTIL_THROW(util::ErrnoException, "Seek failed");
 }
+*/
 
 uint8_t *SetupJustVocab(const Config &config, uint8_t order, std::size_t memory_size, Backing &backing) {
   if (config.write_mmap) {
@@ -130,7 +147,7 @@ void FinishFile(const Config &config, ModelType model_type, unsigned int search_
 
 namespace detail {
 
-bool IsBinaryFormat(int fd) {
+bool IsBinaryFormat(FD fd) {
   const OFF_T size = util::SizeFile(fd);
   if (size == util::kBadSize || (size <= static_cast<OFF_T>(sizeof(Sanity)))) return false;
   // Try reading the header.  
@@ -158,7 +175,7 @@ bool IsBinaryFormat(int fd) {
   return false;
 }
 
-void ReadHeader(int fd, Parameters &out) {
+void ReadHeader(FD fd, Parameters &out) {
   SeekOrThrow(fd, sizeof(Sanity));
   ReadLoop(fd, &out.fixed, sizeof(out.fixed));
   if (out.fixed.probing_multiplier < 1.0)
@@ -177,7 +194,7 @@ void MatchCheck(ModelType model_type, unsigned int search_version, const Paramet
   UTIL_THROW_IF(search_version != params.fixed.search_version, FormatLoadException, "The binary file has " << kModelNames[params.fixed.model_type] << " version " << params.fixed.search_version << " but this code expects " << kModelNames[params.fixed.model_type] << " version " << search_version);
 }
 
-void SeekPastHeader(int fd, const Parameters &params) {
+void SeekPastHeader(FD fd, const Parameters &params) {
   SeekOrThrow(fd, TotalHeaderSize(params.counts.size()));
 }
 

@@ -38,7 +38,7 @@ template <class Quant, class Bhiksha> class TrieSearch {
 
     static const unsigned int kVersion = 0;
 
-    static void UpdateConfigFromBinary(int fd, const std::vector<uint64_t> &counts, Config &config) {
+    static void UpdateConfigFromBinary(FD fd, const std::vector<uint64_t> &counts, Config &config) {
       Quant::UpdateConfigFromBinary(fd, counts, config);
       AdvanceOrThrow(fd, Quant::Size(counts.size(), config) + Unigram::Size(counts[0]));
       Bhiksha::UpdateConfigFromBinary(fd, config);

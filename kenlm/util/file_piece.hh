@@ -35,7 +35,7 @@ class FilePiece {
     // 32 MB default.
     explicit FilePiece(const char *file, std::ostream *show_progress = NULL, OFF_T min_buffer = 33554432);
     // Takes ownership of fd.  name is used for messages.  
-    explicit FilePiece(int fd, const char *name, std::ostream *show_progress = NULL, OFF_T min_buffer = 33554432);
+    explicit FilePiece(FD fd, const char *name, std::ostream *show_progress = NULL, OFF_T min_buffer = 33554432);
 
     ~FilePiece();
      

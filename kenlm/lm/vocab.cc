@@ -29,7 +29,7 @@ const uint64_t kUnknownHash = detail::HashForVocab("<unk>", 5);
 // Sadly some LMs have <UNK>.  
 const uint64_t kUnknownCapHash = detail::HashForVocab("<UNK>", 5);
 
-WordIndex ReadWords(int fd, EnumerateVocab *enumerate) {
+WordIndex ReadWords(FD fd, EnumerateVocab *enumerate) {
   if (!enumerate) return std::numeric_limits<WordIndex>::max();
   const std::size_t kInitialRead = 16384;
   std::string buf;
@@ -37,15 +37,25 @@ WordIndex ReadWords(int fd, EnumerateVocab *enumerate) {
   buf.resize(kInitialRead);
   WordIndex index = 0;
   while (true) {
+#ifdef WIN32
+  abort(); // TODO
+  ssize_t got;
+#else
     ssize_t got = read(fd, &buf[0], kInitialRead);
     UTIL_THROW_IF(got == -1, util::ErrnoException, "Reading vocabulary words");
+#endif
     if (got == 0) return index;
     buf.resize(got);
     while (buf[buf.size() - 1]) {
       char next_char;
+
+#ifdef WIN32
+  abort(); // TODO
+#else
       ssize_t ret = read(fd, &next_char, 1);
       UTIL_THROW_IF(ret == -1, util::ErrnoException, "Reading vocabulary words");
       UTIL_THROW_IF(ret == 0, FormatLoadException, "Missing null terminator on a vocab word.");
+#endif
       buf.push_back(next_char);
     }
     // Ok now we have null terminated strings.  
@@ -68,9 +78,16 @@ void WriteWordsWrapper::Add(WordIndex index, const StringPiece &str) {
   buffer_.push_back(0);
 }
 
-void WriteWordsWrapper::Write(int fd) {
+void WriteWordsWrapper::Write(FD fd) {
+#ifdef WIN32
+  LARGE_INTEGER off = {0,0};
+  DWORD ret = SetFilePointerEx(fd, off, NULL, FILE_END);
+  UTIL_THROW_IF(ret == FALSE, util::ErrnoException, "Failed to seek in binary to vocab words");
+
+#else
   if ((OFF_T)-1 == lseek(fd, 0, SEEK_END))
     UTIL_THROW(util::ErrnoException, "Failed to seek in binary to vocab words");
+#endif
   util::WriteOrThrow(fd, buffer_.data(), buffer_.size());
 }
 
@@ -131,7 +148,7 @@ void SortedVocabulary::FinishedLoading(ProbBackoff *reorder_vocab) {
   bound_ = end_ - begin_ + 1;
 }
 
-void SortedVocabulary::LoadedBinary(int fd, EnumerateVocab *to) {
+void SortedVocabulary::LoadedBinary(FD fd, EnumerateVocab *to) {
   end_ = begin_ + *(reinterpret_cast<const uint64_t*>(begin_) - 1);
   ReadWords(fd, to);
   SetSpecial(Index("<s>"), Index("</s>"), 0);
@@ -189,7 +206,7 @@ void ProbingVocabulary::FinishedLoading(ProbBackoff * /*reorder_vocab*/) {
   SetSpecial(Index("<s>"), Index("</s>"), 0);
 }
 
-void ProbingVocabulary::LoadedBinary(int fd, EnumerateVocab *to) {
+void ProbingVocabulary::LoadedBinary(FD fd, EnumerateVocab *to) {
   UTIL_THROW_IF(header_->version != kProbingVocabularyVersion, FormatLoadException, "The binary file has probing version " << header_->version << " but the code expects version " << kProbingVocabularyVersion << ".  Please rerun build_binary using the same version of the code.");
   lookup_.LoadedBinary();
   ReadWords(fd, to);

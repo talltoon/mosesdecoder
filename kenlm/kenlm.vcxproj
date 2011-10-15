@@ -105,6 +105,7 @@
     <ClCompile Include="util\string_piece.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="build_binary.vcxproj" />
     <None Include="lm\bhiksha.hh" />
     <None Include="lm\binary_format.hh" />
     <None Include="lm\blank.hh" />
@@ -131,7 +132,6 @@
     <None Include="util\ersatz_progress.hh" />
     <None Include="util\exception.hh" />
     <None Include="util\file.hh" />
-    <None Include="util\file_piece.cc.gz" />
     <None Include="util\file_piece.hh" />
     <None Include="util\have.hh" />
     <None Include="util\joint_sort.hh" />

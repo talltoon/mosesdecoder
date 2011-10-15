@@ -4,6 +4,6 @@
 #ifndef UTIL_HAVE__
 #define UTIL_HAVE__
 
-#define HAVE_ZLIB
+//#define HAVE_ZLIB
 
 #endif // UTIL_HAVE__

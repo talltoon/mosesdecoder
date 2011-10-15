@@ -14,6 +14,9 @@
 #include <sys/stat.h>
 #include "util/getopt.h"
 
+#undef max
+#undef min
+
 typedef HANDLE FD;
 
 const FD kBadFD = INVALID_HANDLE_VALUE;
@@ -25,7 +28,7 @@ typedef int ssize_t;
 
 int sysconf(int);
 int msync(void*, int, int);
-int ftruncate(int, int);
+int ftruncate(FD, unsigned int);
 
 //int lrint(int); 
 

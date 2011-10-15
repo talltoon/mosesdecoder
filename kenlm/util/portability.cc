@@ -1,5 +1,6 @@
 
 #include <stdlib.h>
+#include <errno.h>
 #include "util/portability.hh"
 
 #ifdef WIN32
@@ -8,7 +9,6 @@ int RUSAGE_SELF = 0;
 
 int sysconf(int) { return 0; }
 int msync(void*, int, int) { return 0; }
-int ftruncate(int, int) { return 0; }
 int munmap(void *, int) { return 0; }
 void *mmap(void*, int, int, int, int, OFF_T) { return 0; }
 int write(int, const void *, int) {return 0; }
@@ -27,10 +27,37 @@ float strtof(const char *begin, char **end)
 	return (float) ret; 
 }
 
-void d()
+
+int ftruncate (int fd, unsigned int size)
 {
-	//log10(10);
-	//ceil(10);
+  HANDLE hfile;
+  unsigned int curpos;
+
+  if (fd < 0)
+    {
+      errno = EBADF;
+      return -1;
+    }
+
+  hfile = (HANDLE) _get_osfhandle (fd);
+  curpos = SetFilePointer (hfile, 0, NULL, FILE_CURRENT);
+  if (curpos == ~0
+      || SetFilePointer (hfile, size, NULL, FILE_BEGIN) == ~0
+      || !SetEndOfFile (hfile))
+    {
+      int error = GetLastError (); 
+      switch (error)
+	{
+	case ERROR_INVALID_HANDLE:
+	  errno = EBADF;
+	  break;
+	default:
+	  errno = EIO;
+	  break;
+	}
+      return -1;
+    }
+  return 0;
 }
 
 #endif 

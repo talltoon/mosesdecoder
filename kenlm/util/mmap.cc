@@ -89,28 +89,63 @@ void MapRead(LoadMethod method, FD fd, OFF_T offset, std::size_t size, scoped_me
     case READ:
       out.reset(malloc(size), size, scoped_memory::MALLOC_ALLOCATED);
       if (!out.get()) UTIL_THROW(util::ErrnoException, "Allocating " << size << " bytes with malloc");
-      if (-1 == lseek(fd, offset, SEEK_SET)) UTIL_THROW(ErrnoException, "lseek to " << offset << " in fd " << fd << " failed.");
+
+	  #ifdef WIN32
+	  	LARGE_INTEGER offsetWin32 = reinterpret_cast<LARGE_INTEGER&>(offset); // not sure if correct
+
+		DWORD ret = SetFilePointerEx(fd, offsetWin32, NULL, FILE_BEGIN);
+		UTIL_THROW_IF(ret == FALSE, ErrnoException, "lseek to " << offset << " in fd " << fd << " failed.");
+
+	  #else
+	    if (-1 == lseek(fd, offset, SEEK_SET)) UTIL_THROW(ErrnoException, "lseek to " << offset << " in fd " << fd << " failed.");
+
+	  #endif
+
       ReadOrThrow(fd, out.get(), size);
       break;
   }
 }
 
 void *MapAnonymous(std::size_t size) {
+  FD fd;
+#ifdef WIN32
+  fd = kBadFD;
+#else
+  fd = -1;
+#endif
+
   return MapOrThrow(size, true,
 #ifdef MAP_ANONYMOUS
       MAP_ANONYMOUS // Linux
 #else
       MAP_ANON // BSD
 #endif
-      | MAP_PRIVATE, false, -1, 0);
+      | MAP_PRIVATE, false, fd, 0);
 }
 
 void *MapZeroedWrite(const char *name, std::size_t size, scoped_fd &file) {
+#ifdef WIN32
+	FD fd = CreateFileA(name,                // name of the write
+                      GENERIC_WRITE,          // open for writing
+                      0,                      // do not share
+                      NULL,                   // default security
+                      CREATE_NEW,             // create new file only
+                      FILE_ATTRIBUTE_NORMAL,  // normal file
+                      NULL);                  // no attr. template
+	file.reset(fd);
+	if (file.get() == kBadFD)
+      UTIL_THROW(ErrnoException, "Failed to open " << name << " for writing");
+	if (-1 == ftruncate(file.get(), size))
+	  UTIL_THROW(ErrnoException, "ftruncate on " << name << " to " << size << " failed");
+
+#else
+
   file.reset(open(name, O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH));
   if (-1 == file.get())
     UTIL_THROW(ErrnoException, "Failed to open " << name << " for writing");
   if (-1 == ftruncate(file.get(), size))
     UTIL_THROW(ErrnoException, "ftruncate on " << name << " to " << size << " failed");
+#endif
   try {
     return MapOrThrow(size, true, kFileFlags, false, file.get(), 0);
   } catch (ErrnoException &e) {

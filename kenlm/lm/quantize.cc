@@ -37,10 +37,14 @@ const char kSeparatelyQuantizeVersion = 2;
 
 } // namespace
 
-void SeparatelyQuantize::UpdateConfigFromBinary(int fd, const std::vector<uint64_t> &/*counts*/, Config &config) {
+void SeparatelyQuantize::UpdateConfigFromBinary(FD fd, const std::vector<uint64_t> &/*counts*/, Config &config) {
   char version;
+#ifdef WIN32
+  abort(); // TODO
+#else
   if (read(fd, &version, 1) != 1 || read(fd, &config.prob_bits, 1) != 1 || read(fd, &config.backoff_bits, 1) != 1) 
     UTIL_THROW(util::ErrnoException, "Failed to read header for quantization.");
+#endif
   if (version != kSeparatelyQuantizeVersion) UTIL_THROW(FormatLoadException, "This file has quantization version " << (unsigned)version << " but the code expects version " << (unsigned)kSeparatelyQuantizeVersion);
   AdvanceOrThrow(fd, -3);
 }

@@ -94,7 +94,7 @@ extern const int kFileFlags;
 // Wrapper around mmap to check it worked and hide some platform macros.  
 void *MapOrThrow(std::size_t size, bool for_write, int flags, bool prefault, FD fd, OFF_T offset = 0);
 
-void MapRead(LoadMethod method, int fd, OFF_T offset, std::size_t size, scoped_memory &out);
+void MapRead(LoadMethod method, FD fd, OFF_T offset, std::size_t size, scoped_memory &out);
 
 void *MapAnonymous(std::size_t size);
 
