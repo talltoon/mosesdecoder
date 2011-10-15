@@ -1,4 +1,4 @@
-#include "lm/sri.hh"
+#include "lm/sri.h"
 
 #include <stdlib.h>
 

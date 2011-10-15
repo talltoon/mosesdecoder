@@ -1,5 +1,5 @@
-#include "lm/enumerate_vocab.hh"
-#include "lm/model.hh"
+#include "lm/enumerate_vocab.h"
+#include "lm/model.h"
 
 #include <cstdlib>
 #include <fstream>

@@ -106,7 +106,7 @@
    GNU application programs can use a third alternative mode in which
    they can distinguish the relative order of options and other arguments.  */
 
-#include "getopt.h"
+#include "getopt.hh"
 
 /* For communication from `getopt' to the caller.
    When `getopt' finds an option that takes an argument,
@@ -233,7 +233,7 @@ my_index (str, chr)
 /* If using GCC, we can safely declare strlen this way.
    If not using GCC, it is ok not to declare it.  */
 #ifdef __GNUC__
-/* Note that Motorola Delta 68k R3V7 comes with GCC but not stddef.h.
+/* Note that Motorola Delta 68k R3V7 comes with GCC but not stddef.hh.
    That was relevant to code that was here before.  */
 # if (!defined __STDC__ || !__STDC__) && !defined strlen
 /* gcc with -traditional declares the built-in strlen to return int,
@@ -1166,11 +1166,7 @@ _getopt_internal (argc, argv, optstring, longopts, longind, long_only)
   }
 }
 
-int
-getopt (argc, argv, optstring)
-     int argc;
-     char *const *argv;
-     const char *optstring;
+int getopt (int argc, char *const *argv, const char *optstring)
 {
   return _getopt_internal (argc, argv, optstring,
                            (const struct option *) 0,

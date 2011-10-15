@@ -1,6 +1,6 @@
-#include "util/sorted_uniform.hh"
+#include "util/sorted_uniform.h"
 
-#include "util/key_value_packing.hh"
+#include "util/key_value_packing.h"
 
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int.hpp>

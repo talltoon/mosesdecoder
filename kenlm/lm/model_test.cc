@@ -1,4 +1,4 @@
-#include "lm/model.hh"
+#include "lm/model.h"
 
 #include <stdlib.h>
 

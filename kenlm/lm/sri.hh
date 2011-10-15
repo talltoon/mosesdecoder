@@ -1,8 +1,8 @@
 #ifndef LM_SRI__
 #define LM_SRI__
 
-#include "lm/facade.hh"
-#include "util/murmur_hash.hh"
+#include "lm/facade.h"
+#include "util/murmur_hash.h"
 
 #include <cmath>
 #include <exception>

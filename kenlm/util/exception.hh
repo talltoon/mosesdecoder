@@ -68,7 +68,7 @@ template <class Except, class Data> typename Except::template ExceptionTag<Excep
  * operations.  
  *
  * do .. while kludge to swallow trailing ; character
- * http://gcc.gnu.org/onlinedocs/cpp/Swallowing-the-Semicolon.html .  
+ * http://gcc.gnu.org/onlinedocs/cpp/Swallowing-the-Semicolon.hhtml .  
  */
 #define UTIL_THROW(Exception, Modify) do { \
   Exception UTIL_e; \

@@ -1,4 +1,4 @@
-#include "util/bit_packing.hh"
+#include "util/bit_packing.h"
 
 #define BOOST_TEST_MODULE BitPackingTest
 #include <boost/test/unit_test.hpp>

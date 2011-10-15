@@ -1,5 +1,5 @@
-#include "lm/lm_exception.hh"
-#include "lm/sri.hh"
+#include "lm/lm_exception.h"
+#include "lm/sri.h"
 
 #include <Ngram.h>
 #include <Vocab.h>
@@ -82,7 +82,7 @@ unsigned int MatchedLength(Ngram &model, const WordIndex new_word, const SRIVoca
 } // namespace
 
 FullScoreReturn Model::FullScore(const State &in_state, const WordIndex new_word, State &out_state) const {
-  // If you get a compiler in this function, change SRIVocabIndex in sri.hh to match the one found in SRI's Vocab.h.
+  // If you get a compiler in this function, change SRIVocabIndex in sri.h to match the one found in SRI's Vocab.h.
   const SRIVocabIndex *const_history;
   SRIVocabIndex local_history[Order()];
   if (in_state.valid_length_ < kMaxOrder - 1) {

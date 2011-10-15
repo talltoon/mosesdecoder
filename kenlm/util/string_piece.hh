@@ -31,14 +31,14 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// Copied from strings/stringpiece.h with modifications
+// Copied from strings/stringpiece.hh with modifications
 //
 // A string-like object that points to a sized piece of memory.
 //
 // Functions or methods may use const StringPiece& parameters to accept either
 // a "const char*" or a "string" value that will be implicitly converted to
 // a StringPiece.  The implicit conversion means that it is often appropriate
-// to include this .h file in other files rather than forward-declaring
+// to include this .hh file in other files rather than forward-declaring
 // StringPiece as would be appropriate for most other Google classes.
 //
 // Systematic usage of StringPiece is encouraged as it will reduce unnecessary
@@ -51,7 +51,7 @@
 #include "util/have.hh"
 
 #ifdef HAVE_BOOST
-#include <boost/functional/hash/hash.hpp>
+#include <boost/functional/hash/hash.hhpp>
 #endif // HAVE_BOOST
 
 #include <cstring>

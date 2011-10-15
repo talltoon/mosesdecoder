@@ -1,4 +1,4 @@
-#include "util/joint_sort.hh"
+#include "util/joint_sort.h"
 
 #define BOOST_TEST_MODULE JointSortTest
 #include <boost/test/unit_test.hpp>

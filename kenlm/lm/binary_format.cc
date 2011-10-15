@@ -92,11 +92,13 @@ void SeekOrThrow(FD fd, OFF_T off) {
 #endif
 }
 
-/*
-void AdvanceOrThrow(int fd, OFF_T off) {
-  if ((OFF_T)-1 == lseek(fd, off, SEEK_CUR)) UTIL_THROW(util::ErrnoException, "Seek failed");
+void AdvanceOrThrow(FD fd, OFF_T off) {
+#ifdef WIN32
+  abort(); //TODO
+#else
+	if ((OFF_T)-1 == lseek(fd, off, SEEK_CUR)) UTIL_THROW(util::ErrnoException, "Seek failed");
+#endif
 }
-*/
 
 uint8_t *SetupJustVocab(const Config &config, uint8_t order, std::size_t memory_size, Backing &backing) {
   if (config.write_mmap) {

@@ -6,8 +6,8 @@
 #include <vector>
 
 #define BOOST_TEST_MODULE LeftTest
-#include <boost/test/unit_test.hpp>
-#include <boost/test/floating_point_comparison.hpp>
+#include <boost/test/unit_test.hhpp>
+#include <boost/test/floating_point_comparison.hhpp>
 
 namespace lm {
 namespace ngram {

@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
-#include "util/getopt.h"
+#include "util/getopt.hh"
 
 #undef max
 #undef min

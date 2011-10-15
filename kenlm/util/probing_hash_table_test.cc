@@ -1,6 +1,6 @@
-#include "util/probing_hash_table.hh"
+#include "util/probing_hash_table.h"
 
-#include "util/key_value_packing.hh"
+#include "util/key_value_packing.h"
 
 #define BOOST_TEST_MODULE ProbingHashTableTest
 #include <boost/test/unit_test.hpp>

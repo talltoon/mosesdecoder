@@ -10,7 +10,7 @@ int RUSAGE_SELF = 0;
 int sysconf(int) { return 0; }
 int msync(void*, int, int) { return 0; }
 int munmap(void *, int) { return 0; }
-void *mmap(void*, int, int, int, int, OFF_T) { return 0; }
+void *mmap(void*, int, int, int, FD, OFF_T) { return 0; }
 int write(int, const void *, int) {return 0; }
 
 //FILE *popen(const char*, const char*) { return 0; }
@@ -33,10 +33,11 @@ float strtof(const char *begin, char **end)
 }
 
 
-int ftruncate (int fd, unsigned int size)
+int ftruncate (FD hfile, unsigned int size)
 {
-  HANDLE hfile;
   unsigned int curpos;
+  /*
+  HANDLE hfile;
 
   if (fd < 0)
     {
@@ -45,6 +46,7 @@ int ftruncate (int fd, unsigned int size)
     }
 
   hfile = (HANDLE) _get_osfhandle (fd);
+  */
   curpos = SetFilePointer (hfile, 0, NULL, FILE_CURRENT);
   if (curpos == ~0
       || SetFilePointer (hfile, size, NULL, FILE_BEGIN) == ~0

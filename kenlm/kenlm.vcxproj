@@ -82,7 +82,6 @@
     <ClCompile Include="lm\bhiksha.cc" />
     <ClCompile Include="lm\binary_format.cc" />
     <ClCompile Include="lm\config.cc" />
-    <ClCompile Include="lm\left_test.cc" />
     <ClCompile Include="lm\lm_exception.cc" />
     <ClCompile Include="lm\model.cc" />
     <ClCompile Include="lm\quantize.cc" />
@@ -102,7 +101,7 @@
     <ClCompile Include="util\mmap.cc" />
     <ClCompile Include="util\murmur_hash.cc" />
     <ClCompile Include="util\portability.cc" />
-    <ClCompile Include="util\string_piece.cpp" />
+    <ClCompile Include="util\string_piece.cc" />
   </ItemGroup>
   <ItemGroup>
     <None Include="build_binary.vcxproj" />
@@ -133,6 +132,7 @@
     <None Include="util\exception.hh" />
     <None Include="util\file.hh" />
     <None Include="util\file_piece.hh" />
+    <None Include="util\getopt.hh" />
     <None Include="util\have.hh" />
     <None Include="util\joint_sort.hh" />
     <None Include="util\key_value_packing.hh" />
@@ -146,9 +146,6 @@
     <None Include="util\sorted_uniform.hh" />
     <None Include="util\string_piece.hh" />
     <None Include="util\tokenize_piece.hh" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="util\getopt.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
