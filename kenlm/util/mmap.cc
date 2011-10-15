@@ -91,7 +91,8 @@ void MapRead(LoadMethod method, FD fd, OFF_T offset, std::size_t size, scoped_me
       if (!out.get()) UTIL_THROW(util::ErrnoException, "Allocating " << size << " bytes with malloc");
 
 	  #ifdef WIN32
-	  	LARGE_INTEGER offsetWin32 = reinterpret_cast<LARGE_INTEGER&>(offset); // not sure if correct
+  		LARGE_INTEGER offsetWin32;
+		offsetWin32.QuadPart = static_cast<LONGLONG>(offset); // not sure if correct
 
 		DWORD ret = SetFilePointerEx(fd, offsetWin32, NULL, FILE_BEGIN);
 		UTIL_THROW_IF(ret == FALSE, ErrnoException, "lseek to " << offset << " in fd " << fd << " failed.");

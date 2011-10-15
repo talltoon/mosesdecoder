@@ -227,7 +227,8 @@ void FilePiece::MMapShift(OFF_T desired_begin) {
   if (data_.get() == MAP_FAILED) {
     if (desired_begin) {
 	  #ifdef WIN32
-		LARGE_INTEGER offsetWin32 = reinterpret_cast<LARGE_INTEGER&>(desired_begin); // not sure if correct
+		LARGE_INTEGER offsetWin32;
+		offsetWin32.QuadPart = static_cast<LONGLONG>(desired_begin); // not sure if correct
 
 		DWORD ret = SetFilePointerEx(*file_, offsetWin32, NULL, FILE_BEGIN);
 		UTIL_THROW_IF(ret == FALSE, ErrnoException, "mmap failed even though it worked before.  lseek failed too, so using read isn't an option either.");
