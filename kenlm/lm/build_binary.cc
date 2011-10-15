@@ -87,7 +87,8 @@ void ShowSizes(const char *file, const lm::ngram::Config &config) {
     prefix = 'G';
     divide = 1 << 30;
   }
-  long int length = std::max<long int>(2, lrint(ceil(log10(max_length / divide))));
+
+  long int length = std::max<long int>(2, lrint(ceil(log10((float)max_length / (float)divide))));
   std::cout << "Memory estimate:\ntype    ";
   // right align bytes.  
   for (long int i = 0; i < length - 2; ++i) std::cout << ' ';

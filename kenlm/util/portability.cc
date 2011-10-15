@@ -15,12 +15,17 @@ int write(int, const void *, int) {return 0; }
 
 //FILE *popen(const char*, const char*) { return 0; }
 //int pclose(FILE *) { return 0; }
-//int lrint(int)  { return 0;} 
 
 // to be implemented by boost
 int mkdtemp(const char*) { return 0; }
 
 // done
+long lrint(float x)
+{
+  long ret = (long) x;
+  return ret;
+}
+
 float strtof(const char *begin, char **end) 
 { 
 	double ret = strtod(begin, end);

@@ -30,7 +30,7 @@ int sysconf(int);
 int msync(void*, int, int);
 int ftruncate(FD, unsigned int);
 
-//int lrint(int); 
+long lrint(float); 
 
 /*
 struct timeval 
