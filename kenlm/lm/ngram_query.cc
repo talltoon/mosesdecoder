@@ -1,5 +1,5 @@
-#include "lm/enumerate_vocab.h"
-#include "lm/model.h"
+#include "lm/enumerate_vocab.hh"
+#include "lm/model.hh"
 
 #include <cstdlib>
 #include <fstream>
@@ -14,11 +14,15 @@ float FloatSec(const struct timeval &tv) {
 }
 
 void PrintUsage(const char *message) {
+#ifdef WIN32
+
+#else
   struct rusage usage;
   if (getrusage(RUSAGE_SELF, &usage)) {
     perror("getrusage");
     return;
   }
+
   std::cerr << message;
   std::cerr << "user\t" << FloatSec(usage.ru_utime) << "\nsys\t" << FloatSec(usage.ru_stime) << '\n';
 
@@ -31,6 +35,8 @@ void PrintUsage(const char *message) {
       break;
     }
   }
+#endif
+
 }
 
 template <class Model> void Query(const Model &model, bool sentence_context) {

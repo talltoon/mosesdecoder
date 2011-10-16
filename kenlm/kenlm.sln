@@ -5,6 +5,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kenlm", "kenlm.vcxproj", "{
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "build_binary", "build_binary.vcxproj", "{48F2D42D-83E1-44DE-A4B7-87A8DEEF4D03}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "query", "query.vcxproj", "{6CCF9201-9E5C-46A2-A1AA-8675693E37E6}"
+	ProjectSection(ProjectDependencies) = postProject
+		{42D29D99-FC9A-4860-BD84-7148BEF1DBD3} = {42D29D99-FC9A-4860-BD84-7148BEF1DBD3}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -19,6 +24,10 @@ Global
 		{48F2D42D-83E1-44DE-A4B7-87A8DEEF4D03}.Debug|Win32.Build.0 = Debug|Win32
 		{48F2D42D-83E1-44DE-A4B7-87A8DEEF4D03}.Release|Win32.ActiveCfg = Release|Win32
 		{48F2D42D-83E1-44DE-A4B7-87A8DEEF4D03}.Release|Win32.Build.0 = Release|Win32
+		{6CCF9201-9E5C-46A2-A1AA-8675693E37E6}.Debug|Win32.ActiveCfg = Debug|Win32
+		{6CCF9201-9E5C-46A2-A1AA-8675693E37E6}.Debug|Win32.Build.0 = Debug|Win32
+		{6CCF9201-9E5C-46A2-A1AA-8675693E37E6}.Release|Win32.ActiveCfg = Release|Win32
+		{6CCF9201-9E5C-46A2-A1AA-8675693E37E6}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
