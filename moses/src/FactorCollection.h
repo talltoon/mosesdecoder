@@ -52,7 +52,8 @@ namespace Moses
  * FactorFriend's public copy constructor and everybody else sees Factor's
  * private copy constructor.  
  */
-struct FactorFriend {
+class FactorFriend {
+public:
   Factor in;
 };
 
