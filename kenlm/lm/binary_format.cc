@@ -95,7 +95,12 @@ void SeekOrThrow(FD fd, OFF_T off) {
 
 void AdvanceOrThrow(FD fd, OFF_T off) {
 #ifdef WIN32
-  abort(); //TODO
+  LARGE_INTEGER offsetWin32;
+  offsetWin32.QuadPart = static_cast<LONGLONG>(off); // not sure if correct
+
+  DWORD ret = SetFilePointerEx(fd, offsetWin32, NULL, FILE_CURRENT);
+  UTIL_THROW_IF(ret == FALSE, util::ErrnoException, "Seek failed");
+
 #else
 	if ((OFF_T)-1 == lseek(fd, off, SEEK_CUR)) UTIL_THROW(util::ErrnoException, "Seek failed");
 #endif

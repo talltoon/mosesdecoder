@@ -40,7 +40,10 @@ const char kSeparatelyQuantizeVersion = 2;
 void SeparatelyQuantize::UpdateConfigFromBinary(FD fd, const std::vector<uint64_t> &/*counts*/, Config &config) {
   char version;
 #ifdef WIN32
-  abort(); // TODO
+  DWORD numberOfBytesRead;
+  BOOL ret = ReadFile(fd, &version, 1, &numberOfBytesRead, NULL);
+  UTIL_THROW_IF(ret == FALSE, util::ErrnoException, "read failed");
+
 #else
   if (read(fd, &version, 1) != 1 || read(fd, &config.prob_bits, 1) != 1 || read(fd, &config.backoff_bits, 1) != 1) 
     UTIL_THROW(util::ErrnoException, "Failed to read header for quantization.");
