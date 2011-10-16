@@ -289,7 +289,7 @@ template <class Model> LMKenResult LanguageModelKen<Model>::GetKenFullScoreForgo
     return result;
   }
 
-  lm::WordIndex indices[contextFactor.size()];
+  lm::WordIndex *indices = (lm::WordIndex*) malloc(sizeof(lm::WordIndex) * contextFactor.size() );
   TranslateIDs(contextFactor, indices);
 
   lm::FullScoreReturn ret(m_ngram->FullScoreForgotState(indices + 1, indices + contextFactor.size(), indices[0], static_cast<KenLMState&>(outState).state));
@@ -297,6 +297,9 @@ template <class Model> LMKenResult LanguageModelKen<Model>::GetKenFullScoreForgo
   result.score = TransformLMScore(ret.prob);
   result.unknown = (indices[0] == 0);
   result.ngram_length = ret.ngram_length;
+
+  free(indices);
+
   return result;
 }
 
@@ -306,9 +309,11 @@ template <class Model> void LanguageModelKen<Model>::GetState(const std::vector<
     static_cast<KenLMState&>(outState).state = m_ngram->NullContextState();
     return;
   }
-  lm::WordIndex indices[contextFactor.size()];
+  lm::WordIndex *indices = (lm::WordIndex*) malloc(sizeof(lm::WordIndex) * contextFactor.size() );
   TranslateIDs(contextFactor, indices);
   m_ngram->GetState(indices, indices + contextFactor.size(), static_cast<KenLMState&>(outState).state);
+
+  free(indices);
 }
 
 template <class Model> const FFState *LanguageModelKen<Model>::GetNullContextState() const

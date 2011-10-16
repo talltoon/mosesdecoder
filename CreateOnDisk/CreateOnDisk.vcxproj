@@ -57,7 +57,7 @@
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>zlib.lib;$(OutDir)moses.lib;$(OutDir)OnDiskPt.lib</AdditionalDependencies>
+      <AdditionalDependencies>zlib.lib;$(OutDir)/moses.lib;$(OutDir)/OnDiskPt.lib;$(OutDir)/kenlm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
@@ -76,7 +76,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>zlib.lib;$(OutDir)moses.lib;$(OutDir)OnDiskPt.lib</AdditionalDependencies>
+      <AdditionalDependencies>zlib.lib;$(OutDir)/moses.lib;$(OutDir)/OnDiskPt.lib;$(OutDir)/kenlm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
