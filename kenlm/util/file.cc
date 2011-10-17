@@ -73,13 +73,8 @@ FD CreateOrThrow(const char *name) {
 OFF_T SizeFile(FD fd) {
 #if WIN32
   LARGE_INTEGER size;
-  BOOL ret = GetFileSizeEx(fd, &size);
-  
-  if (ret == 0) return kBadSize;
-  
-  OFF_T retSize = reinterpret_cast<OFF_T&>(size); // not sure about this
-  return retSize;
-
+  if (!GetFileSizeEx(fd, &size)) return kBadSize;
+  return static_cast<OFF_T>(size);
 #else
   struct stat sb;
   fstat(fd, &sb);
@@ -91,38 +86,34 @@ OFF_T SizeFile(FD fd) {
 void ReadOrThrow(FD fd, void *to_void, std::size_t amount) {
   uint8_t *to = static_cast<uint8_t*>(to_void);
 
-#ifdef WIN32
-  DWORD numberOfBytesRead;
-
-  BOOL ret = ReadFile(fd, to_void, amount, &numberOfBytesRead, NULL);
-  UTIL_THROW_IF(ret == FALSE, ErrnoException, "Reading " << amount << " from fd " << fd << " failed.");
-
-#else
   while (amount) {
-    ssize_t ret = read(fd, to, amount);
-    if (ret == -1) UTIL_THROW(ErrnoException, "Reading " << amount << " from fd " << fd << " failed.");
-    if (ret == 0) UTIL_THROW(Exception, "Hit EOF in fd " << fd << " but there should be " << amount << " more bytes to read.");
-    amount -= ret ;
-    to += ret;
-  }
+#ifdef WIN32
+    DWORD bytes_read;
+    UTIL_THROW_IF(!ReadFile(fd, to, amount, &bytes_read, NULL), ErrnoException, "Reading " << amount << " from fd " << fd << " failed.");
+#else
+    ssize_t bytes_read = read(fd, to, amount);
+    UTIL_THROW_IF(bytes_read == -1, ErrnoException, "Reading " << amount << " from fd " << fd << " failed.");
 #endif
+    UTIL_THROW_IF(bytes_read == 0, EndOfFileException, "Hit EOF in fd " << fd << " but there should be " << amount << " more bytes to read.");
+    amount -= bytes_read;
+    to += bytes_read;
+  }
 }
 
 void WriteOrThrow(FD fd, const void *data_void, std::size_t size) {
   const uint8_t *data = static_cast<const uint8_t*>(data_void);
-#ifdef WIN32
-  DWORD numberOfBytesWritten;
-  BOOL ret = WriteFile(fd, data, size, &numberOfBytesWritten, NULL);
-  UTIL_THROW_IF(ret == FALSE, ErrnoException, "Write failed");
-
-#else
   while (size) {
-    ssize_t ret = write(fd, data, size);
-    if (ret < 1) UTIL_THROW(util::ErrnoException, "Write failed");
-    data += ret;
-    size -= ret;
-  }
+#ifdef WIN32
+    DWORD bytes_written;
+    UTIL_THROW_IF(!WriteFile(fd, data, size, &bytes_written, NULL), ErrnoException, "Write failed");
+    UTIL_THROW_IF(!bytes_written, util::ErrnoException, "Short write");
+#else
+    ssize_t bytes_written = write(fd, data, size);
+    UTIL_THROW_IF(bytes_written < 1, util::ErrnoException, "Write failed");
 #endif
+    data += bytes_written;
+    size -= bytes_written;
+  }
 }
 
 void RemoveOrThrow(const char *name) {
