@@ -23,12 +23,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #ifndef moses_PhraseDictionaryMemoryHashed_h
 #define moses_PhraseDictionaryMemoryHashed_h
 
-//#include <boost/unordered_map.hpp>
+#include <boost/unordered_map.hpp>
 
 #include "PhraseDictionary.h"
 #include "HashIndex.h"
 #include "StringVector.h"
-//#include "Huffman.h"
+#include "Huffman.h"
 
 namespace Moses
 {
@@ -36,9 +36,9 @@ namespace Moses
 class PhraseDictionaryMemoryHashed : public PhraseDictionary
 {
 protected:  
-  //typedef boost::unordered_map<size_t, size_t> SymbolCounter;
-  //typedef boost::unordered_map<float, size_t> ScoreCounter;
-  //typedef boost::unordered_map<unsigned char, size_t> AlignCounter;
+  typedef boost::unordered_map<size_t, size_t> SymbolCounter;
+  typedef boost::unordered_map<float, size_t> ScoreCounter;
+  typedef boost::unordered_map<unsigned char, size_t> AlignCounter;
   
   PhraseTableImplementation m_implementation;
   
@@ -54,9 +54,14 @@ protected:
   StringVector<unsigned char, size_t> m_targetSymbols;
   std::map<std::string, size_t> m_targetSymbolsMap;
   
-  //Hufftree<size_t, size_t>* m_treeSymbols;
-  //Hufftree<float, size_t>* m_treeScores;
-  //Hufftree<unsigned char, size_t>* m_treeAlignments;
+    
+  SymbolCounter symbolCount;
+  ScoreCounter  scoreCount;
+  AlignCounter  alignCount; 
+  
+  Hufftree<size_t, size_t>* m_treeSymbols;
+  Hufftree<float, size_t>* m_treeScores;
+  Hufftree<unsigned char, size_t>* m_treeAlignments;
    
   void PackTargetPhrase(std::string, std::ostream&);
   void PackScores(std::string, std::ostream&);
@@ -70,9 +75,9 @@ protected:
   std::istream& UnpackScores(std::istream&, TargetPhrase*) const;
   std::istream& UnpackAlignment(std::istream&, TargetPhrase*) const;
 
-  //std::istream& DecompressTargetPhrase(std::istream&, TargetPhrase*) const;
-  //std::istream& DecompressScores(std::istream&, TargetPhrase*) const;
-  //std::istream& DecompressAlignment(std::istream&, TargetPhrase*) const;
+  std::istream& DecompressTargetPhrase(std::istream&, TargetPhrase*) const;
+  std::istream& DecompressScores(std::istream&, TargetPhrase*) const;
+  std::istream& DecompressAlignment(std::istream&, TargetPhrase*) const;
   
   size_t AddOrGetTargetSymbol(std::string);
   std::string GetTargetSymbol(size_t) const;
@@ -85,7 +90,7 @@ public:
                                PhraseDictionaryFeature* feature)
     : PhraseDictionary(numScoreComponent, feature),
     m_implementation(implementation), m_hash(HashIndex(CMPH_CHM))
-    //, m_treeSymbols(0), m_treeScores(0), m_treeAlignments(0)
+    , m_treeSymbols(0), m_treeScores(0), m_treeAlignments(0)
   {}
     
   virtual ~PhraseDictionaryMemoryHashed();

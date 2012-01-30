@@ -438,6 +438,7 @@ void  LexicalReorderingTableMemoryHashed::LoadText(const std::string& filePath)
 }
 
 void LexicalReorderingTableMemoryHashed::LoadBinary(const std::string& filePath) {
+  std::cerr << "Loading hashed version of lexical reordering model" << std::endl;
   std::string file = filePath + ".mphlexr";
   std::FILE* pFile = std::fopen(file.c_str() , "r");
   m_tree = new Hufftree<float, size_t>(pFile);

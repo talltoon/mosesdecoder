@@ -64,6 +64,7 @@ public:
 
 private:
   class Node;
+  
   Node* tree;
 
   typedef boost::unordered_map<DataType, std::vector<bool> > encodemap;
@@ -72,12 +73,12 @@ private:
   class NodeOrder;
 };
 
-
 template<typename DataType, typename Frequency>
 struct Hufftree<DataType, Frequency>::Node
 {
   Frequency frequency;
   Node* leftChild;
+  static size_t nodes;
   union
   {
     Node* rightChild; // if leftChild != 0
@@ -89,6 +90,7 @@ struct Hufftree<DataType, Frequency>::Node
     leftChild(0),
     data(new DataType(d))
   {
+    nodes++;
   }
 
   Node(Node* left, Node* right):
@@ -177,7 +179,8 @@ Hufftree<DataType, Frequency>::Hufftree(std::FILE* in)
 
   size_t length;
   fread(&length, sizeof(size_t), 1, in);
-  
+  std::cerr << "Nodes: " << length << std::endl;
+
   size_t count = 0;
   while (count < length) {
     Frequency freq;
@@ -209,9 +212,12 @@ Hufftree<DataType, Frequency>::Hufftree(std::FILE* in)
 
 template<typename DataType, typename Frequency>
 void Hufftree<DataType, Frequency>::Save(std::FILE* out) {
-  size_t length = encoding.size();
+  size_t length = Node::nodes;
+  std::cerr << "Nodes: " << length << std::endl;
   fwrite(&length, sizeof(size_t), 1, out);
   tree->Save(out);
+  
+  std::cerr << "Nodes2: " << tree->nodes << std::endl;
 }
 
 template<typename DataType, typename Frequency>
@@ -394,5 +400,8 @@ void Hufftree<DataType, Frequency>::decodeWithLength(InputIterator begin, InputI
     }
   }
 }
+
+template<typename DataType, typename Frequency>
+size_t Hufftree<DataType, Frequency>::Node::nodes = 0;
 
 #endif
