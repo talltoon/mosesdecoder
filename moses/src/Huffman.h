@@ -31,6 +31,7 @@ Retrieved from: http://en.literateprograms.org/Huffman_coding_(C_Plus_Plus)?oldi
 #include <map>
 
 #include <queue>
+#include <deque>
 #include <iostream>
 #include <cstdio>
 
@@ -45,6 +46,7 @@ public:
   ~Hufftree() { delete tree; }
 
   void Save(std::FILE*);
+  size_t size();
 
   std::vector<bool> encode(DataType const& value) {
     return encoding[value];
@@ -78,7 +80,7 @@ struct Hufftree<DataType, Frequency>::Node
 {
   Frequency frequency;
   Node* leftChild;
-  static size_t nodes;
+  
   union
   {
     Node* rightChild; // if leftChild != 0
@@ -89,9 +91,7 @@ struct Hufftree<DataType, Frequency>::Node
     frequency(f),
     leftChild(0),
     data(new DataType(d))
-  {
-    nodes++;
-  }
+  {}
 
   Node(Node* left, Node* right):
     frequency(left->frequency + right->frequency),
@@ -179,7 +179,7 @@ Hufftree<DataType, Frequency>::Hufftree(std::FILE* in)
 
   size_t length;
   fread(&length, sizeof(size_t), 1, in);
-  std::cerr << "Nodes: " << length << std::endl;
+  std::cerr << "Nodes1: " << length << std::endl;
 
   size_t count = 0;
   while (count < length) {
@@ -212,12 +212,33 @@ Hufftree<DataType, Frequency>::Hufftree(std::FILE* in)
 
 template<typename DataType, typename Frequency>
 void Hufftree<DataType, Frequency>::Save(std::FILE* out) {
-  size_t length = Node::nodes;
-  std::cerr << "Nodes: " << length << std::endl;
+  size_t length = size();
+  std::cerr << "Nodes1: " << length << std::endl;
+  std::cerr << "Nodes2: " << encoding.size() << std::endl;
   fwrite(&length, sizeof(size_t), 1, out);
   tree->Save(out);
+}
+
+template<typename DataType, typename Frequency>
+size_t Hufftree<DataType, Frequency>::size() {
+  size_t nodes = 0;
   
-  std::cerr << "Nodes2: " << tree->nodes << std::endl;
+  std::deque<Node*> stack;
+  stack.push_back(tree);
+  
+  while (stack.size()) {
+      Node* actual = stack.back();
+      stack.pop_back();
+  
+      if (actual->leftChild) {
+          stack.push_back(actual->leftChild);
+          stack.push_back(actual->rightChild);
+      }
+      else
+          nodes++; 
+  }
+  
+  return nodes;
 }
 
 template<typename DataType, typename Frequency>
@@ -400,8 +421,5 @@ void Hufftree<DataType, Frequency>::decodeWithLength(InputIterator begin, InputI
     }
   }
 }
-
-template<typename DataType, typename Frequency>
-size_t Hufftree<DataType, Frequency>::Node::nodes = 0;
 
 #endif
