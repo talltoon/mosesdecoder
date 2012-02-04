@@ -25,17 +25,33 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <boost/unordered_map.hpp>
 
+#ifdef WITH_THREADS
+#ifdef BOOST_HAS_PTHREADS
+#include <boost/thread/mutex.hpp>
+#endif
+#endif
+
 #include "PhraseDictionary.h"
 #include "HashIndex.h"
 #include "StringVector.h"
-#include "Huffman.h"
+#include "Hufftree.h"
 
 namespace Moses
 {
 
 class PhraseDictionaryMemoryHashed : public PhraseDictionary
 {
-protected:  
+protected:
+    
+#ifdef WITH_THREADS
+#ifdef BOOST_HAS_PTHREADS
+  boost::mutex m_threadMutex;
+  std::map<pthread_t, std::vector<TargetPhraseCollection*> > m_threadSentenceCache;
+#endif
+#else
+  std::vector<TargetPhraseCollection*> m_sentenceCache;
+#endif
+    
   typedef boost::unordered_map<size_t, size_t> SymbolCounter;
   typedef boost::unordered_map<float, size_t> ScoreCounter;
   typedef boost::unordered_map<unsigned char, size_t> AlignCounter;
@@ -59,9 +75,9 @@ protected:
   ScoreCounter  scoreCount;
   AlignCounter  alignCount; 
   
-  Hufftree<size_t, size_t>* m_treeSymbols;
-  Hufftree<float, size_t>* m_treeScores;
-  Hufftree<unsigned char, size_t>* m_treeAlignments;
+  Hufftree<int, size_t>* m_treeSymbols;
+  Hufftree<int, float>* m_treeScores;
+  Hufftree<int, unsigned char>* m_treeAlignments;
    
   void PackTargetPhrase(std::string, std::ostream&);
   void PackScores(std::string, std::ostream&);
@@ -111,9 +127,35 @@ public:
 
   void AddEquivPhrase(const Phrase &source, const TargetPhrase &targetPhrase);
 
-  // for mert
-  virtual void InitializeForInput(InputType const&) {
-    /* Don't do anything source specific here as this object is shared between threads.*/
+  void InitializeForInput(const Moses::InputType&) {}
+  
+  void CacheTargetPhraseCollection(TargetPhraseCollection *tpc) {
+    #ifdef WITH_THREADS
+    #ifdef BOOST_HAS_PTHREADS
+    boost::mutex::scoped_lock lock(m_threadMutex);
+    m_threadSentenceCache[pthread_self()].push_back(tpc);
+    #endif
+    #else
+    m_sentenceCache.push_back(tpc);
+    #endif
+  }
+  
+  void CleanUp() {
+    #ifdef WITH_THREADS
+    #ifdef BOOST_HAS_PTHREADS
+    boost::mutex::scoped_lock lock(m_threadMutex);
+    std::vector<TargetPhraseCollection*> &ref = m_threadSentenceCache[pthread_self()];
+    for(std::vector<TargetPhraseCollection*>::iterator it = ref.begin();
+        it != ref.end(); it++)
+        delete *it;
+    ref.clear();
+    #endif
+    #else
+    for(std::vector<TargetPhraseCollection*>::iterator it = m_sentenceCache.begin();
+        it != m_sentenceCache.end(); it++)
+        delete *it;
+    m_sentenceCache.clear();
+    #endif
   }
 
   virtual ChartRuleLookupManager *CreateRuleLookupManager(

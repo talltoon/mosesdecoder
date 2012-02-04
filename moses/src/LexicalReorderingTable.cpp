@@ -393,7 +393,7 @@ void  LexicalReorderingTableMemoryHashed::LoadText(const std::string& filePath)
   std::cerr << std::endl;
   
   std::cerr << "Creating Huffman compression tree for " << frequencies.size() << " symbols" << std::endl;
-  m_tree = new Hufftree<float, size_t>(frequencies.begin(), frequencies.end());
+  m_tree = new Hufftree<int, float>(frequencies.begin(), frequencies.end());
   
   double freq_sum = 0, len_sum = 0;
   for(std::map<float, size_t>::iterator it = frequencies.begin(); it != frequencies.end(); it++) {
@@ -441,7 +441,7 @@ void LexicalReorderingTableMemoryHashed::LoadBinary(const std::string& filePath)
   std::cerr << "Loading hashed version of lexical reordering model" << std::endl;
   std::string file = filePath + ".mphlexr";
   std::FILE* pFile = std::fopen(file.c_str() , "r");
-  m_tree = new Hufftree<float, size_t>(pFile);
+  m_tree = new Hufftree<int, float>(pFile);
   m_hash.Load(pFile);
   m_scores.load(pFile);
   std::fclose(pFile);

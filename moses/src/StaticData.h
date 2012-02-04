@@ -33,7 +33,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <string>
 
 #ifdef WITH_THREADS
+  #ifdef BOOST_HAS_PTHREADS
 #include <boost/thread/mutex.hpp>
+  #endif
 #endif
 
 #include "TypeDef.h"

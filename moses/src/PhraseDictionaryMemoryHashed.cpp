@@ -64,30 +64,6 @@ bool PhraseDictionaryMemoryHashed::Load(const std::vector<FactorType> &input
 bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
   InputFileStream inFile(filePath);
 
-  //std::stringstream tt;
-  //PackAlignment("0-0 1-1 1-2 2-3 3-3 4-4", tt, alignCount);
-  //PackAlignment("0-0 1-1 3-3 3-4", tt, alignCount);
-  //m_treeAlignments = new Hufftree<unsigned char, size_t>(alignCount.begin(), alignCount.end());
-  //
-  //std::vector<unsigned char> a;
-  //while(UnpackAlignment(tt, a)) {
-  //  for(int i = 0; i < a.size(); i+=2)
-  //    std::cerr << unsigned(a[i]) << "-" << unsigned(a[i+1]) << std::endl;
-  //    
-  //  std::string astring = m_treeAlignments->encodeWithLength(a.begin(), a.end());
-  //  std::cerr << astring.size() << std::endl;
-  //    
-  //  std::vector<unsigned char> b;
-  //  std::stringstream astream(astring);
-  //  std::istream_iterator<char, char> isit(astream), eof;
-  //  m_treeAlignments->decodeWithLength(isit, eof, std::inserter(b, b.begin()));
-  //  
-  //  std::cerr << b.size() << std::endl;
-  //  
-  //  for(int i = 0; i < b.size(); i+=2)
-  //    std::cerr << unsigned(b[i]) << "-" << unsigned(b[i+1]) << std::endl;
-  //}
-  
   string line, prevSourcePhrase = "";
   size_t count = 0;
   size_t line_num = 0;
@@ -152,7 +128,7 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
   std::cerr << std::endl;
   
   std::cerr << "Creating Huffman tree for " << symbolCount.size() << " symbols" << std::endl;
-  m_treeSymbols = new Hufftree<size_t, size_t>(symbolCount.begin(), symbolCount.end());
+  m_treeSymbols = new Hufftree<int, size_t>(symbolCount.begin(), symbolCount.end());
   
   {
   size_t sum = 0, sumall = 0;
@@ -164,7 +140,7 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
   }
   
   std::cerr << "Creating Huffman tree for " << scoreCount.size() << " scores" << std::endl;
-  m_treeScores  = new Hufftree<float, size_t>(scoreCount.begin(), scoreCount.end());
+  m_treeScores  = new Hufftree<int, float>(scoreCount.begin(), scoreCount.end());
   
   {
   size_t sum = 0, sumall = 0;
@@ -175,7 +151,7 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
   std::cerr << double(sumall)/sum << " bits per score" << std::endl;
   }
   
-  //m_treeAlignments = new Hufftree<unsigned char, size_t>(alignCount.begin(), alignCount.end());
+  //m_treeAlignments = new Hufftree<int, unsigned char>(alignCount.begin(), alignCount.end());
   
   m_hash.Create();
   
@@ -237,11 +213,11 @@ bool PhraseDictionaryMemoryHashed::LoadBinary(std::string filePath) {
     //std::cerr << "2: " << std::ftell(pFile) << std::endl;
     m_targetSymbols.load(pFile);
     //std::cerr << "3: " << std::ftell(pFile) << std::endl;
-    m_treeSymbols   = new Hufftree<size_t, size_t>(pFile);
+    m_treeSymbols   = new Hufftree<int, size_t>(pFile);
     //std::cerr << "4: " << std::ftell(pFile) << std::endl;
-    m_treeScores    = new Hufftree<float, size_t>(pFile);
+    m_treeScores    = new Hufftree<int, float>(pFile);
     //std::cerr << "5: " << std::ftell(pFile) << std::endl;
-    //m_treeAlignments = new Hufftree<unsigned char, size_t>(pFile);
+    //m_treeAlignments = new Hufftree<int, unsigned char>(pFile);
     m_targetPhrases.load(pFile);
     //std::cerr << "6: " << std::ftell(pFile) << std::endl;
     std::fclose(pFile);
@@ -399,14 +375,14 @@ std::istream& PhraseDictionaryMemoryHashed::DecompressTargetPhrase(std::istream&
 }
 
 std::istream& PhraseDictionaryMemoryHashed::DecompressScores(std::istream& is, TargetPhrase* targetPhrase) const {
+
+  std::vector<float> scores;
+  std::istream_iterator<char, char> isit(is), eof;
+  m_treeScores->decode(m_numScoreComponent, isit, eof, std::back_inserter(scores));
   
-    std::vector<float> scores;
-    std::istream_iterator<char, char> isit(is), eof;
-    m_treeScores->decode(m_numScoreComponent, isit, eof, std::back_inserter(scores));
-    
-    targetPhrase->SetScore(m_feature, scores, *m_weight, m_weightWP, *m_languageModels);
-  
-    return is;
+  targetPhrase->SetScore(m_feature, scores, *m_weight, m_weightWP, *m_languageModels);
+
+  return is;
 }
 
 std::istream& PhraseDictionaryMemoryHashed::DecompressAlignment(std::istream& is, TargetPhrase* targetPhrase) const {
@@ -424,14 +400,7 @@ std::istream& PhraseDictionaryMemoryHashed::DecompressAlignment(std::istream& is
   return is;
 }
 
-TargetPhraseCollection *PhraseDictionaryMemoryHashed::CreateTargetPhraseCollection(const Phrase &source) {
-  return const_cast<TargetPhraseCollection*>(GetTargetPhraseCollection(source));
-}
-
-void PhraseDictionaryMemoryHashed::AddEquivPhrase(const Phrase &source, const TargetPhrase &targetPhrase) { }
-
-const TargetPhraseCollection *PhraseDictionaryMemoryHashed::GetTargetPhraseCollection(const Phrase &sourcePhrase) const
-{
+TargetPhraseCollection *PhraseDictionaryMemoryHashed::CreateTargetPhraseCollection(const Phrase &sourcePhrase) {
   const std::string& factorDelimiter = StaticData::Instance().GetFactorDelimiter();
   
   std::string sourcePhraseString = sourcePhrase.GetStringRep(*m_input);
@@ -439,37 +408,47 @@ const TargetPhraseCollection *PhraseDictionaryMemoryHashed::GetTargetPhraseColle
   
   if(index != m_hash.GetSize()) {  
     TargetPhraseCollection* phraseColl = new TargetPhraseCollection();
-    
-    //std::cerr << index << " " << sourcePhrase << ": " << m_targetPhrases[index].size() << std::endl;
-       
+           
     std::stringstream tp(m_targetPhrases[index]);
     tp.unsetf(std::ios::skipws);
     
     TargetPhrase* targetPhrase = new TargetPhrase(Output);
     targetPhrase->SetSourcePhrase(&sourcePhrase);
     
-    while(DecompressTargetPhrase(tp, targetPhrase) && DecompressScores(tp, targetPhrase)) {
+    while(DecompressTargetPhrase(tp, targetPhrase)
+          && DecompressScores(tp, targetPhrase)) {
           //&& DecompressAlignment(tp, targetPhrase)) {
-  
-   // while(UnpackTargetPhrase(tp, targetPhrase) && UnpackScores(tp, targetPhrase)
-     //     && UnpackAlignment(tp, targetPhrase)) {
       
-      //std::cerr << "\t" << *targetPhrase << std::endl;
       phraseColl->Add(targetPhrase);
+      
       targetPhrase = new TargetPhrase(Output);
-      targetPhrase->SetSourcePhrase(&sourcePhrase);
-    
+      targetPhrase->SetSourcePhrase(&sourcePhrase);    
     }
     delete targetPhrase;
     
     phraseColl->NthElement(m_tableLimit);
+    CacheTargetPhraseCollection(phraseColl);
     return phraseColl;
   }
   else
     return NULL;
 }
 
-PhraseDictionaryMemoryHashed::~PhraseDictionaryMemoryHashed() { }
+void PhraseDictionaryMemoryHashed::AddEquivPhrase(const Phrase &source, const TargetPhrase &targetPhrase) { }
+
+const TargetPhraseCollection *PhraseDictionaryMemoryHashed::GetTargetPhraseCollection(const Phrase &sourcePhrase) const {
+  return const_cast<PhraseDictionaryMemoryHashed*>(this)->CreateTargetPhraseCollection(sourcePhrase)
+}
+
+PhraseDictionaryMemoryHashed::~PhraseDictionaryMemoryHashed() {
+  if(m_treeSymbols)
+    delete m_treeSymbols;
+
+  if(m_treeScores)
+    delete m_treeScores;
+    
+  CleanUp();
+}
 
 //TO_STRING_BODY(PhraseDictionaryMemoryHashed);
 

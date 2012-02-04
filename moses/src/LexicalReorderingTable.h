@@ -21,7 +21,7 @@
 #include "PrefixTreeMap.h"
 #include "HashIndex.h"
 #include "StringVector.h"
-#include "Huffman.h"
+#include "Hufftree.h"
 
 namespace Moses
 {
@@ -120,7 +120,7 @@ private:
   std::string MakeKey(const std::string& f, const std::string& e, const std::string& c) const;
     
   HashIndex m_hash;
-  Hufftree<float, size_t>* m_tree;
+  Hufftree<int, float>* m_tree;
   StringVector<unsigned char, unsigned long> m_scores;
 };
 
