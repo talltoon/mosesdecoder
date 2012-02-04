@@ -437,7 +437,7 @@ TargetPhraseCollection *PhraseDictionaryMemoryHashed::CreateTargetPhraseCollecti
 void PhraseDictionaryMemoryHashed::AddEquivPhrase(const Phrase &source, const TargetPhrase &targetPhrase) { }
 
 const TargetPhraseCollection *PhraseDictionaryMemoryHashed::GetTargetPhraseCollection(const Phrase &sourcePhrase) const {
-  return const_cast<PhraseDictionaryMemoryHashed*>(this)->CreateTargetPhraseCollection(sourcePhrase)
+  return const_cast<PhraseDictionaryMemoryHashed*>(this)->CreateTargetPhraseCollection(sourcePhrase);
 }
 
 PhraseDictionaryMemoryHashed::~PhraseDictionaryMemoryHashed() {
