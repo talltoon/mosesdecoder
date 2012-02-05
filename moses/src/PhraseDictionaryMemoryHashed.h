@@ -66,11 +66,10 @@ protected:
   float m_weightWP;
   
   HashIndex m_hash;
-  StringVector<unsigned char, size_t> m_targetPhrases;
   StringVector<unsigned char, size_t> m_targetSymbols;
   std::map<std::string, size_t> m_targetSymbolsMap;
+  StringVector<unsigned char, size_t> m_targetPhrases;
   
-    
   SymbolCounter symbolCount;
   ScoreCounter  scoreCount;
   AlignCounter  alignCount; 

@@ -1030,7 +1030,12 @@ sub run_single_snt2cooc {
     print STDERR "(2.1a) running snt2cooc $f-$e @ ".`date`."\n";
     safesystem("mkdir -p $dir") or die("ERROR");
     print "$SNT2COOC $vcb_e $vcb_f $train > $dir/$f-$e.cooc\n";
-    safesystem("$SNT2COOC $vcb_e $vcb_f $train > $dir/$f-$e.cooc") or die("ERROR");
+    #if(-e "$dir/$f-$e.cooc") {
+#	print STDERR "$dir/$f-$e.cooc already exists reusing.";
+ #   }
+  #  else {
+	safesystem("$SNT2COOC $vcb_e $vcb_f $train > $dir/$f-$e.cooc") or die("ERROR");
+   # }
 }
 
 ### (3) CREATE WORD ALIGNMENT FROM GIZA ALIGNMENTS

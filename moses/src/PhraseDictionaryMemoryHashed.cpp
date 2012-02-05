@@ -38,6 +38,35 @@ using namespace std;
 
 namespace Moses
 {
+
+typedef std::pair<float, size_t> Fpair;
+
+struct ScoreSorter {
+  bool operator()(Fpair a, Fpair b) {
+    
+    if(a.second > b.second)
+      return true;
+    
+    if(a.second == b.second && a.first < b.first)
+      return true;
+    
+    return false;
+  }
+};
+
+struct FloatTrans {
+  FloatTrans(boost::unordered_map<float, float> &fm)
+    : m_fm(fm)
+  {}
+  
+  float operator()(float a) {
+    return m_fm[a];
+  }
+  
+  boost::unordered_map<float, float>& m_fm;
+  
+};
+  
 bool PhraseDictionaryMemoryHashed::Load(const std::vector<FactorType> &input
                                   , const std::vector<FactorType> &output
                                   , const string &filePath
@@ -131,24 +160,57 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
   m_treeSymbols = new Hufftree<int, size_t>(symbolCount.begin(), symbolCount.end());
   
   {
-  size_t sum = 0, sumall = 0;
-  for(SymbolCounter::iterator it = symbolCount.begin(); it != symbolCount.end(); it++) {
-    sumall += it->second * m_treeSymbols->encode(it->first).size();
-    sum    += it->second;
+    size_t sum = 0, sumall = 0;
+    for(SymbolCounter::iterator it = symbolCount.begin(); it != symbolCount.end(); it++) {
+      sumall += it->second * m_treeSymbols->encode(it->first).size();
+      sum    += it->second;
+    }
+    std::cerr << double(sumall)/sum << " bits per symbol" << std::endl;
   }
-  std::cerr << double(sumall)/sum << " bits per symbol" << std::endl;
-  }
+  
+  //std::vector<Fpair> freqScores;
+  //freqScores.insert(freqScores.begin(), scoreCount.begin(), scoreCount.end());
+  //std::sort(freqScores.begin(), freqScores.end(), ScoreSorter());
+  //
+  //std::vector<float> topScores;
+  //size_t max = 500000;
+  //for(size_t i = 0; i < max; i++)
+  //  topScores.push_back(freqScores[i].first);
+  //
+  //std::sort(topScores.begin(), topScores.end());
+  //boost::unordered_map<float, float> floatMap;
+  //
+  //ScoreCounter scoreCount2;
+  //for(ScoreCounter::iterator it = scoreCount.begin(); it != scoreCount.end(); it++) {
+  //  std::vector<float>::iterator found =
+  //    std::lower_bound(topScores.begin(), topScores.end(), it->first);
+  //    
+  //  if(found != topScores.end()) {
+  //    scoreCount2[*found] += it->second;
+  //    floatMap[it->first] = *found;
+  //    
+  //    //std::cerr << "Mapping " << it->first << " to " << *found << std::endl;
+  //    
+  //  }
+  //  else {
+  //    scoreCount2[topScores.back()] += it->second;
+  //    floatMap[it->first] = topScores.back();
+  //  }
+  //}
+  //
+  //scoreCount = scoreCount2;
+  //FloatTrans floatTrans(floatMap);
   
   std::cerr << "Creating Huffman tree for " << scoreCount.size() << " scores" << std::endl;
   m_treeScores  = new Hufftree<int, float>(scoreCount.begin(), scoreCount.end());
   
   {
-  size_t sum = 0, sumall = 0;
-  for(ScoreCounter::iterator it = scoreCount.begin(); it != scoreCount.end(); it++) {
-    sumall += it->second * m_treeScores->encode(it->first).size();
-    sum    += it->second;
-  }
-  std::cerr << double(sumall)/sum << " bits per score" << std::endl;
+    size_t sum = 0, sumall = 0;
+    for(ScoreCounter::iterator it = scoreCount.begin(); it != scoreCount.end(); it++) {
+      sumall += it->second * m_treeScores->encode(it->first).size();
+      sum    += it->second;
+    }
+    std::cerr << double(sumall)/sum << " bits per score" << std::endl;
   }
   
   //m_treeAlignments = new Hufftree<int, unsigned char>(alignCount.begin(), alignCount.end());
@@ -186,13 +248,26 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
     
     std::stringstream compressedPhrase;
     compressedPhrase.unsetf(std::ios::skipws);
-    while(UnpackTargetPhrase(packedPhrase, symbols) &&  UnpackScores(packedPhrase, scores)) 
+    while(UnpackTargetPhrase(packedPhrase, symbols) &&  UnpackScores(packedPhrase, scores)) {
           //&& UnpackAlignment(packedPhrase, alignment))
+      
+      //std::cerr << "1: " << scores.size() << std::endl;
+      //for(std::vector<float>::iterator it = scores.begin(); it != scores.end(); it++)
+      //  std::cerr << *it << " ";
+      //std::cerr << std::endl;
+        
+      //std::transform(scores.begin(), scores.end(), scores.begin(), floatTrans);
+
+      //std::cerr << "2: " << scores.size() << std::endl;
+      //for(std::vector<float>::iterator it = scores.begin(); it != scores.end(); it++)
+      //  std::cerr << *it << " ";
+      //std::cerr << std::endl;
+      
       compressedPhrase
         << m_treeSymbols->encodeWithLength(symbols.begin(), symbols.end())
         << m_treeScores->encode(scores.begin(), scores.end());
         //<< m_treeAlignments->encodeWithLength(alignment.begin(), alignment.end());  
-    
+    }
     tempTargetPhrases.push_back(compressedPhrase.str());
   }
   std::cerr << std::endl;
@@ -227,8 +302,6 @@ bool PhraseDictionaryMemoryHashed::LoadBinary(std::string filePath) {
 
 bool PhraseDictionaryMemoryHashed::SaveBinary(std::string filePath) {
     bool ok = true;
-    
-    //std::cout << "test!!!!!!" << std::endl;
     
     std::FILE* pFile = std::fopen(filePath.c_str() , "w");
     //std::cerr << "1: " << std::ftell(pFile) << std::endl;
