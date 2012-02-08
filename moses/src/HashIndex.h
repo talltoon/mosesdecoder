@@ -92,11 +92,11 @@ class HashIndex {
     }
     
     void AddKey(const char* keyArg) {
-        m_keys.push_back(std::string(keyArg));
+        AddKey(std::string(keyArg));
     }
     
     void AddKey(std::string keyArg) {
-        AddKey(keyArg);
+        m_keys.push_back(keyArg);
     }
    
     void ClearKeys() {
