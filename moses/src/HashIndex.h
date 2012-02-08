@@ -10,23 +10,25 @@
 #include "cmph/src/cmph.h"
 #include "MurmurHash3.h"
 #include "uint8n.h"
+#include "StringVector.h"
+#include "CmphStringVectorAdapter.h"
 
-cmph_io_adapter_t *cmph_io_phrasetable_adapter(std::FILE * phrasetable_fd);
-
+namespace Moses {
 
 class HashIndex {
   private:
     typedef unsigned int Fprint;
+    typedef StringVector<unsigned char, size_t, MmapAllocator> SV;
     
-    
-    std::vector<char*> m_keys;
+    SV m_keys;
     std::vector<Fprint> m_fprints;
     
     CMPH_ALGO m_algo;
     cmph_t* m_hash;
     
     void CalcHashFunction() {
-        cmph_io_adapter_t *source = cmph_io_vector_adapter((char**) &m_keys[0], m_keys.size());
+        cmph_io_adapter_t *source = CmphStringVectorAdapter(m_keys);
+        //cmph_io_adapter_t *source = cmph_io_vector_adapter((char**) &m_keys[0], m_keys.size());
     
         cmph_config_t *config = cmph_config_new(source);
         cmph_config_set_algo(config, m_algo);
@@ -43,9 +45,10 @@ class HashIndex {
     }
     
     void CalcFprints() {
-        for(std::vector<char*>::iterator it = m_keys.begin(); it != m_keys.end(); it++) {
-            Fprint fprint = GetFprint(*it);
-            size_t idx = cmph_search(m_hash, *it, (cmph_uint32) strlen(*it));
+        for(SV::string_iterator it = m_keys.begin<SV::string_iterator>();
+            it != m_keys.end<SV::string_iterator>(); it++) {
+            Fprint fprint = GetFprint(it->c_str());
+            size_t idx = cmph_search(m_hash, it->c_str(), (cmph_uint32) it->size());
             
             if(idx >= m_fprints.size())
                 m_fprints.resize(idx + 1);
@@ -89,19 +92,14 @@ class HashIndex {
     }
     
     void AddKey(const char* keyArg) {
-        char* key = new char[std::strlen(keyArg)+1];
-        std::strcpy(key, keyArg);
-        m_keys.push_back(key);
+        m_keys.push_back(std::string(keyArg));
     }
     
     void AddKey(std::string keyArg) {
-        AddKey(keyArg.c_str());
+        AddKey(keyArg);
     }
    
     void ClearKeys() {
-        for(std::vector<char*>::iterator it = m_keys.begin(); it != m_keys.end(); it++)
-            delete[] *it;
-        m_keys.clear();
     }
     
     void Create() {
@@ -141,4 +139,5 @@ class HashIndex {
     }
 };
 
+}
 #endif
