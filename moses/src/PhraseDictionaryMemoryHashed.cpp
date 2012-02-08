@@ -100,6 +100,8 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
   
   std::cerr << "Reading in phrase table ";
   
+  StringVector<unsigned char, unsigned long, MmapAllocator> packedTargetPhrases;
+  
   std::stringstream targetStream;
   while(getline(inFile, line)) {    
     ++line_num;
@@ -137,7 +139,7 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
       m_hash.AddKey(Trim(prevSourcePhrase));
       std::string temp = targetStream.str();
 
-      m_targetPhrases.push_back(temp);
+      packedTargetPhrases.push_back(temp);
       
       targetStream.str("");
     }
@@ -153,7 +155,7 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
   
   m_hash.AddKey(Trim(prevSourcePhrase));
   std::string temp = targetStream.str();
-  m_targetPhrases.push_back(temp);
+  packedTargetPhrases.push_back(temp);
   std::cerr << std::endl;
   
   std::cerr << "Creating Huffman tree for " << symbolCount.size() << " symbols" << std::endl;
@@ -230,8 +232,6 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
   }
   std::cerr << std::endl;
   
-  StringVector<unsigned char, unsigned long> tempTargetPhrases;
-  
   std::cerr << "Reordering and compressing target phrases ";
   for(size_t i = 0; i < map.size(); i++) {
     if((i+1) % 100000 == 0)
@@ -239,7 +239,7 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
     if((i+1) % 1000000 == 0)
       std::cerr << "[" << (i+1) << "]";
     
-    std::stringstream packedPhrase(m_targetPhrases[map[i]].str());
+    std::stringstream packedPhrase(packedTargetPhrases[map[i]].str());
     packedPhrase.unsetf(std::ios::skipws);
     
     std::vector<size_t> symbols;
@@ -268,11 +268,9 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
         << m_treeScores->encode(scores.begin(), scores.end());
         //<< m_treeAlignments->encodeWithLength(alignment.begin(), alignment.end());  
     }
-    tempTargetPhrases.push_back(compressedPhrase.str());
+    m_targetPhrases.push_back(compressedPhrase.str());
   }
   std::cerr << std::endl;
-  m_targetPhrases.swap(tempTargetPhrases);
-  
   m_hash.ClearKeys();
  
   return true;

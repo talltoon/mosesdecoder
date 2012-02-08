@@ -6,10 +6,12 @@
 #include <string>
 #include <iterator>
 #include <cstdio>
+#include <cassert>
 
 #include <boost/iterator/iterator_facade.hpp>
 
 #include "MonotonicVector.h"
+#include "MmapAllocator.h"
 
 namespace Moses {
 
@@ -44,15 +46,16 @@ class ValueIteratorRange {
 
 // ********** StringVector **********
 
-template <typename ValueT = unsigned char, typename PosT = unsigned int>
+template <typename ValueT = unsigned char, typename PosT = unsigned int,
+          template <typename> class Allocator = std::allocator>
 class StringVector {    
-  private:
-    std::vector<ValueT> m_charArray;
-    //std::vector<PosT> m_positions;
+  protected:
+    std::vector<ValueT, Allocator<ValueT> > m_charArray;
     MonotonicVector<PosT, unsigned short, 20> m_positions;
     bool m_sorted;
+    bool m_memoryMapped;
 
-    const ValueT* value_ptr(PosT i) const;
+    virtual const ValueT* value_ptr(PosT i) const;
     
   public:
     typedef ValueIteratorRange<typename std::vector<ValueT>::const_iterator> range;
@@ -64,11 +67,11 @@ class StringVector {
       
       private:
         PosT m_index;
-        StringVector<ValueT, PosT>* m_container;
+        StringVector<ValueT, PosT, Allocator>* m_container;
     
       public:
         RangeIterator();
-        RangeIterator(StringVector<ValueT, PosT> &sv, PosT index=0);
+        RangeIterator(StringVector<ValueT, PosT, Allocator> &sv, PosT index=0);
         
         PosT get_index();
   
@@ -91,11 +94,11 @@ class StringVector {
     
       private:
         PosT m_index;
-        StringVector<ValueT, PosT>* m_container;
+        StringVector<ValueT, PosT, Allocator>* m_container;
     
       public:
         StringIterator();
-        StringIterator(StringVector<ValueT, PosT> &sv, PosT index=0);
+        StringIterator(StringVector<ValueT, PosT, Allocator> &sv, PosT index=0);
             
         PosT get_index();
         
@@ -115,7 +118,7 @@ class StringVector {
     
     StringVector();
     
-    void swap(StringVector<ValueT, PosT> &c) {
+    void swap(StringVector<ValueT, PosT, Allocator> &c) {
       m_positions.swap(c.m_positions);
       m_charArray.swap(c.m_charArray);
       
@@ -126,7 +129,7 @@ class StringVector {
     
     bool is_sorted() const;
     PosT size() const;
-    PosT size2() const;
+    virtual PosT size2() const;
     
     template<class Iterator> Iterator begin() const; 
     template<class Iterator> Iterator end() const;
@@ -150,48 +153,86 @@ class StringVector {
     PosT find(StringT &s) const;
     PosT find(const char* c) const;
     
-    bool save(std::FILE* out) {
+    virtual bool load(std::FILE* in, bool memoryMapped = false) {
+      m_memoryMapped = memoryMapped;
+      
+      bool success = true;
+      
+      success &= sizeof(bool) == std::fread(&m_sorted, sizeof(bool), 1, in);
+      success &= m_positions.load(in);
+
+      success &= loadCharArray(m_charArray, in, m_memoryMapped);       
+      return success;
+    }
+    
+    bool loadCharArray(std::vector<ValueT, std::allocator<ValueT> >& c,
+                       std::FILE* in, bool map = false) {
+      // Can only be read into memory. Mapping not possible with std:allocator.
+      assert(map == false);
+      
+      bool success = true;
+      
+      size_t valSize;
+      success &= sizeof(size_t) == std::fread(&valSize, sizeof(size_t), 1, in);
+      
+      c.resize(valSize, 0);
+      success &= valSize*sizeof(ValueT)
+                 == std::fread(&c[0], sizeof(ValueT), valSize, in);
+    
+      return success;
+    }
+    
+    bool loadCharArray(std::vector<ValueT, MmapAllocator<ValueT> >& c,
+                       std::FILE* in, bool map = false) {
+      bool success = true;
+
+      size_t valSize;
+      success &= sizeof(size_t) == std::fread(&valSize, sizeof(size_t), 1, in);
+
+      if(map == false) {
+        // Read data into temporary file (default constructor of MmapAllocator)
+        // and map memory onto temporary file. Can be resized.
+        
+        c.resize(valSize, 0);
+        success &= valSize*sizeof(ValueT)
+                   == std::fread(&c[0], sizeof(ValueT), valSize, in);    
+      }
+      else {
+        // Map it directly on specified region of file "in" starting at valPos
+        // with length valSize * sizeof(ValueT). Mapped region cannot be resized.
+        
+        size_t valPos = std::ftell(in);
+        Allocator<ValueT> alloc(in, valSize, valPos);
+        std::vector<ValueT, Allocator<ValueT> > charArrayTemp(alloc);
+        charArrayTemp.resize(valSize);
+        c.swap(charArrayTemp);
+      }
+      
+      return success;
+    }
+    
+    virtual bool load(std::string filename, bool memoryMapped = false) {
+      std::FILE* pFile = fopen(filename.c_str(), "r");
+      load(pFile, memoryMapped);
+      fclose(pFile);
+      return true;
+    }
+
+    virtual bool save(std::FILE* out) {
       std::fwrite(&m_sorted, sizeof(bool), 1, out);
       
       m_positions.save(out);
-      //size_t posSize = m_positions.size();
-      //std::fwrite(&posSize, sizeof(size_t), 1, out);
-      //std::fwrite(&m_positions[0], sizeof(PosT), posSize, out);
-
-      size_t valSize = m_charArray.size();
+    
+      size_t valSize = size2();
       std::fwrite(&valSize, sizeof(size_t), 1, out);
       std::fwrite(&m_charArray[0], sizeof(ValueT), valSize, out);
 
       return true;
     }
     
-    bool load(std::FILE* in) {
-      std::fread(&m_sorted, sizeof(bool), 1, in);
-      
-      m_positions.load(in);
-      //size_t posSize;
-      //std::fread(&posSize, sizeof(size_t), 1, in);
-      //m_positions.resize(posSize, 0);
-      //std::fread(&m_positions[0], sizeof(PosT), posSize, in);
-
-      size_t valSize;
-      std::fread(&valSize, sizeof(size_t), 1, in);
-      m_charArray.resize(valSize, 0);
-      std::fread(&m_charArray[0], sizeof(ValueT), valSize, in);
-      
-      return true;
-    }
-    
-    bool save(std::string filename) {
+    virtual bool save(std::string filename) {
       std::FILE* pFile = fopen(filename.c_str(), "w");
       save(pFile);
-      fclose(pFile);
-      return true;
-    }
-    
-    bool load(std::string filename) {
-      std::FILE* pFile = fopen(filename.c_str(), "r");
-      load(pFile);
       fclose(pFile);
       return true;
     }
@@ -273,212 +314,211 @@ OStream& operator<<(OStream &os, ValueIteratorRange<ValueIteratorT> cr) {
 
 // StringVector
 
-template<typename ValueT, typename PosT>
-StringVector<ValueT, PosT>::StringVector() : m_sorted(true) { }
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+StringVector<ValueT, PosT, Allocator>::StringVector()
+ : m_sorted(true), m_memoryMapped(false) { }
 
-template<typename ValueT, typename PosT> 
+template<typename ValueT, typename PosT, template <typename> class Allocator> 
 template <typename StringT>
-void StringVector<ValueT, PosT>::push_back(StringT s) {
-    if(is_sorted() && size() && !(back() < s)) {
-        //std::cerr << s << " : is not larger than : " << back() << std::endl;
+void StringVector<ValueT, PosT, Allocator>::push_back(StringT s) {
+    if(is_sorted() && size() && !(back() < s))
         m_sorted = false;
-    }
 
-    m_positions.push_back(m_charArray.size());
+    m_positions.push_back(size2());
     std::copy(s.begin(), s.end(), std::back_inserter(m_charArray));
 }
 
-template<typename ValueT, typename PosT> 
-void StringVector<ValueT, PosT>::push_back(const char* c) {
+template<typename ValueT, typename PosT, template <typename> class Allocator> 
+void StringVector<ValueT, PosT, Allocator>::push_back(const char* c) {
     std::string dummy(c);
     push_back(dummy);
 }
 
-template<typename ValueT, typename PosT> 
+template<typename ValueT, typename PosT, template <typename> class Allocator> 
 template <typename Iterator>
-Iterator StringVector<ValueT, PosT>::begin() const {
-    return Iterator(const_cast<StringVector<ValueT, PosT>&>(*this), 0);
+Iterator StringVector<ValueT, PosT, Allocator>::begin() const {
+    return Iterator(const_cast<StringVector<ValueT, PosT, Allocator>&>(*this), 0);
 }
     
-template<typename ValueT, typename PosT> 
+template<typename ValueT, typename PosT, template <typename> class Allocator> 
 template <typename Iterator>
-Iterator StringVector<ValueT, PosT>::end() const {
-    return Iterator(const_cast<StringVector<ValueT, PosT>&>(*this), size());
+Iterator StringVector<ValueT, PosT, Allocator>::end() const {
+    return Iterator(const_cast<StringVector<ValueT, PosT, Allocator>&>(*this), size());
 }
 
-template<typename ValueT, typename PosT>
-typename StringVector<ValueT, PosT>::iterator StringVector<ValueT, PosT>::begin() const {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+typename StringVector<ValueT, PosT, Allocator>::iterator StringVector<ValueT, PosT, Allocator>::begin() const {
     return begin<iterator>();
 };  
 
-template<typename ValueT, typename PosT>
-typename StringVector<ValueT, PosT>::iterator StringVector<ValueT, PosT>::end() const {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+typename StringVector<ValueT, PosT, Allocator>::iterator StringVector<ValueT, PosT, Allocator>::end() const {
     return end<iterator>();
 };  
 
-template<typename ValueT, typename PosT>
-bool StringVector<ValueT, PosT>::is_sorted() const {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+bool StringVector<ValueT, PosT, Allocator>::is_sorted() const {
     return m_sorted;
 }
 
-template<typename ValueT, typename PosT>
-PosT StringVector<ValueT, PosT>::size() const {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+PosT StringVector<ValueT, PosT, Allocator>::size() const {
     return m_positions.size();
 }
 
-template<typename ValueT, typename PosT>
-PosT StringVector<ValueT, PosT>::size2() const {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+PosT StringVector<ValueT, PosT, Allocator>::size2() const {
     return m_charArray.size();
 }
     
-template<typename ValueT, typename PosT>
-typename StringVector<ValueT, PosT>::range StringVector<ValueT, PosT>::at(PosT i) const {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+typename StringVector<ValueT, PosT, Allocator>::range StringVector<ValueT, PosT, Allocator>::at(PosT i) const {
     return range(begin(i), end(i));
 }
     
-template<typename ValueT, typename PosT>
-typename StringVector<ValueT, PosT>::range StringVector<ValueT, PosT>::operator[](PosT i) const {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+typename StringVector<ValueT, PosT, Allocator>::range StringVector<ValueT, PosT, Allocator>::operator[](PosT i) const {
     return at(i);
 }
 
-template<typename ValueT, typename PosT>
-typename StringVector<ValueT, PosT>::range StringVector<ValueT, PosT>::back() const {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+typename StringVector<ValueT, PosT, Allocator>::range StringVector<ValueT, PosT, Allocator>::back() const {
     return at(size()-1);
 }
 
-template<typename ValueT, typename PosT>
-PosT StringVector<ValueT, PosT>::length(PosT i) const {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+PosT StringVector<ValueT, PosT, Allocator>::length(PosT i) const {
     if(i+1 < size())
         return m_positions[i+1] - m_positions[i];
     else
-        return m_charArray.size() - m_positions[i];
+        return size2() - m_positions[i];
 }
 
-template<typename ValueT, typename PosT>
-const ValueT* StringVector<ValueT, PosT>::value_ptr(PosT i) const {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+const ValueT* StringVector<ValueT, PosT, Allocator>::value_ptr(PosT i) const {
     return &m_charArray[m_positions[i]];
 }
 
-template<typename ValueT, typename PosT>
-typename std::vector<ValueT>::const_iterator StringVector<ValueT, PosT>::begin(PosT i) const {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+typename std::vector<ValueT>::const_iterator StringVector<ValueT, PosT, Allocator>::begin(PosT i) const {
     return typename std::vector<ValueT>::const_iterator(value_ptr(i));
 }    
 
-template<typename ValueT, typename PosT>
-typename std::vector<ValueT>::const_iterator StringVector<ValueT, PosT>::end(PosT i) const {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+typename std::vector<ValueT>::const_iterator StringVector<ValueT, PosT, Allocator>::end(PosT i) const {
     return typename std::vector<ValueT>::const_iterator(value_ptr(i) + length(i));
 }    
 
-template<typename ValueT, typename PosT>
+template<typename ValueT, typename PosT, template <typename> class Allocator>
 template <typename StringT>
-PosT StringVector<ValueT, PosT>::find(StringT &s) const {
+PosT StringVector<ValueT, PosT, Allocator>::find(StringT &s) const {
     if(m_sorted)
         return std::distance(begin(), std::lower_bound(begin(), end(), s));
     return std::distance(begin(), std::find(begin(), end(), s));
 }
 
-template<typename ValueT, typename PosT>
-PosT StringVector<ValueT, PosT>::find(const char* c) const {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+PosT StringVector<ValueT, PosT, Allocator>::find(const char* c) const {
     std::string s(c);
     return find(s);
 }
 
 // RangeIterator
 
-template<typename ValueT, typename PosT>
-StringVector<ValueT, PosT>::RangeIterator::RangeIterator() : m_index(0), m_container(0) { }
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+StringVector<ValueT, PosT, Allocator>::RangeIterator::RangeIterator() : m_index(0), m_container(0) { }
 
-template<typename ValueT, typename PosT>
-StringVector<ValueT, PosT>::RangeIterator::RangeIterator(StringVector<ValueT, PosT> &sv, PosT index)
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+StringVector<ValueT, PosT, Allocator>::RangeIterator::RangeIterator(StringVector<ValueT, PosT, Allocator> &sv, PosT index)
   : m_index(index), m_container(&sv) { }
     
-template<typename ValueT, typename PosT>
-PosT StringVector<ValueT, PosT>::RangeIterator::get_index() {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+PosT StringVector<ValueT, PosT, Allocator>::RangeIterator::get_index() {
     return m_index;
 }
     
-template<typename ValueT, typename PosT>
-typename StringVector<ValueT, PosT>::range
-  StringVector<ValueT, PosT>::RangeIterator::dereference() const {
-    return StringVector<ValueT, PosT>::range(
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+typename StringVector<ValueT, PosT, Allocator>::range
+  StringVector<ValueT, PosT, Allocator>::RangeIterator::dereference() const {
+    return StringVector<ValueT, PosT, Allocator>::range(
         m_container->begin(m_index),
         m_container->end(m_index)
     );
 }
 
-template<typename ValueT, typename PosT>
-bool StringVector<ValueT, PosT>::RangeIterator::equal(
-  StringVector<ValueT, PosT>::RangeIterator const& other) const {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+bool StringVector<ValueT, PosT, Allocator>::RangeIterator::equal(
+  StringVector<ValueT, PosT, Allocator>::RangeIterator const& other) const {
     return m_index == other.m_index && m_container == other.m_container;
 }
 
-template<typename ValueT, typename PosT>
-void StringVector<ValueT, PosT>::RangeIterator::increment() {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+void StringVector<ValueT, PosT, Allocator>::RangeIterator::increment() {
     m_index++;
 }
 
-template<typename ValueT, typename PosT>
-void StringVector<ValueT, PosT>::RangeIterator::decrement() {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+void StringVector<ValueT, PosT, Allocator>::RangeIterator::decrement() {
     m_index--;
 }
 
-template<typename ValueT, typename PosT>
-void StringVector<ValueT, PosT>::RangeIterator::advance(PosT n) {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+void StringVector<ValueT, PosT, Allocator>::RangeIterator::advance(PosT n) {
     m_index += n;
 }
 
-template<typename ValueT, typename PosT>
-PosT StringVector<ValueT, PosT>::RangeIterator::distance_to(
-  StringVector<ValueT, PosT>::RangeIterator const& other) const {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+PosT StringVector<ValueT, PosT, Allocator>::RangeIterator::distance_to(
+  StringVector<ValueT, PosT, Allocator>::RangeIterator const& other) const {
     return other.m_index - m_index;
 }
 
 // StringIterator
 
-template<typename ValueT, typename PosT>
-StringVector<ValueT, PosT>::StringIterator::StringIterator()
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+StringVector<ValueT, PosT, Allocator>::StringIterator::StringIterator()
   : m_index(0), m_container(0) { }
 
-template<typename ValueT, typename PosT>
-StringVector<ValueT, PosT>::StringIterator::StringIterator(
-  StringVector<ValueT, PosT> &sv, PosT index) : m_index(index),
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+StringVector<ValueT, PosT, Allocator>::StringIterator::StringIterator(
+  StringVector<ValueT, PosT, Allocator> &sv, PosT index) : m_index(index),
   m_container(&sv) { }
     
-template<typename ValueT, typename PosT>
-PosT StringVector<ValueT, PosT>::StringIterator::get_index() {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+PosT StringVector<ValueT, PosT, Allocator>::StringIterator::get_index() {
     return m_index;
 }
     
-template<typename ValueT, typename PosT>
-const std::string StringVector<ValueT, PosT>::StringIterator::dereference() const {
-    return StringVector<ValueT, PosT>::range(m_container->begin(m_index),
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+const std::string StringVector<ValueT, PosT, Allocator>::StringIterator::dereference() const {
+    return StringVector<ValueT, PosT, Allocator>::range(m_container->begin(m_index),
       m_container->end(m_index)).str();    
 }
 
-template<typename ValueT, typename PosT>
-bool StringVector<ValueT, PosT>::StringIterator::equal(
-  StringVector<ValueT, PosT>::StringIterator const& other) const {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+bool StringVector<ValueT, PosT, Allocator>::StringIterator::equal(
+  StringVector<ValueT, PosT, Allocator>::StringIterator const& other) const {
     return m_index == other.m_index && m_container == other.m_container;
 }
 
-template<typename ValueT, typename PosT>
-void StringVector<ValueT, PosT>::StringIterator::increment() {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+void StringVector<ValueT, PosT, Allocator>::StringIterator::increment() {
     m_index++;
 }
 
-template<typename ValueT, typename PosT>
-void StringVector<ValueT, PosT>::StringIterator::decrement() {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+void StringVector<ValueT, PosT, Allocator>::StringIterator::decrement() {
     m_index--;
 }
 
-template<typename ValueT, typename PosT>
-void StringVector<ValueT, PosT>::StringIterator::advance(PosT n) {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+void StringVector<ValueT, PosT, Allocator>::StringIterator::advance(PosT n) {
     m_index += n;
 }
 
-template<typename ValueT, typename PosT>
-PosT StringVector<ValueT, PosT>::StringIterator::distance_to(
-  StringVector<ValueT, PosT>::StringIterator const& other) const {
+template<typename ValueT, typename PosT, template <typename> class Allocator>
+PosT StringVector<ValueT, PosT, Allocator>::StringIterator::distance_to(
+  StringVector<ValueT, PosT, Allocator>::StringIterator const& other) const {
     return other.m_index - m_index;    
 }
 

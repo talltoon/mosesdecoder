@@ -77,7 +77,7 @@ class MonotonicVector {
       }
     }
     
-    void load(std::FILE* in) {
+    bool load(std::FILE* in) {
       size_t size;
       
       fread(&size, sizeof(size_t), 1, in);
@@ -91,6 +91,8 @@ class MonotonicVector {
       fread(&size, sizeof(size_t), 1, in);
       m_rests.resize(size);
       fread(&m_rests[0], sizeof(std::pair<PosT, PosT>), size, in);
+      
+      return true;
     }
     
     void save(std::FILE* out) {
