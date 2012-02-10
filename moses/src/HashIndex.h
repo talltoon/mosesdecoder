@@ -11,24 +11,27 @@
 #include "MurmurHash3.h"
 #include "uint8n.h"
 #include "StringVector.h"
+#include "MmapAllocator.h"
 #include "CmphStringVectorAdapter.h"
 
 namespace Moses {
 
+template <template <typename> class Allocator1 = MmapAllocator,
+          template <typename> class Allocator2 = std::allocator>
 class HashIndex {
   private:
     typedef unsigned int Fprint;
-    typedef StringVector<unsigned char, size_t, MmapAllocator> SV;
+    typedef StringVector<unsigned char, size_t, Allocator1> SV;
     
     SV m_keys;
-    std::vector<Fprint> m_fprints;
+    std::vector<Fprint, Allocator2<Fprint> > m_fprints;
+    std::vector<size_t> m_posMap;
     
     CMPH_ALGO m_algo;
     cmph_t* m_hash;
     
     void CalcHashFunction() {
         cmph_io_adapter_t *source = CmphStringVectorAdapter(m_keys);
-        //cmph_io_adapter_t *source = cmph_io_vector_adapter((char**) &m_keys[0], m_keys.size());
     
         cmph_config_t *config = cmph_config_new(source);
         cmph_config_set_algo(config, m_algo);
@@ -45,16 +48,27 @@ class HashIndex {
     }
     
     void CalcFprints() {
-        for(SV::string_iterator it = m_keys.begin<SV::string_iterator>();
-            it != m_keys.end<SV::string_iterator>(); it++) {
-            Fprint fprint = GetFprint(it->c_str());
-            size_t idx = cmph_search(m_hash, it->c_str(), (cmph_uint32) it->size());
+        std::cerr << "Calculating finger prints for source phrases and mapping" << std::endl;
+        m_fprints.resize(m_keys.size());
+        m_posMap.resize(m_keys.size());
+        
+        size_t i = 0;
+        for(typename SV::iterator it = m_keys.begin(); it != m_keys.end(); it++) {
+            if((i+1) % 100000 == 0)
+              std::cerr << ".";
+            if((i+1) % 5000000 == 0)
+              std::cerr << "[" << (i+1) << "]" << std::endl;  
+
+            std::string temp = *it;
+            Fprint fprint = GetFprint(temp.c_str());
+            size_t idx = cmph_search(m_hash, temp.c_str(), (cmph_uint32) temp.size());
             
-            if(idx >= m_fprints.size())
-                m_fprints.resize(idx + 1);
             m_fprints[idx] = fprint;
+            m_posMap[idx] = i;
+            i++;
         }
-    }
+        std::cerr << std::endl;
+    }  
     
   public:
     HashIndex() : m_algo(CMPH_CHD) {}
@@ -85,6 +99,12 @@ class HashIndex {
         return GetHash(key);
     }
     
+    size_t GetMapPos(size_t index) const {
+      if(m_posMap.size() > index)
+        return m_posMap[index];
+      return GetSize();
+    }
+    
     size_t GetHashByIndex(size_t index) const {
         if(index < m_keys.size())
             return GetHash(m_keys[index]);
@@ -100,6 +120,8 @@ class HashIndex {
     }
    
     void ClearKeys() {
+      SV empty;
+      empty.swap(m_keys);
     }
     
     void Create() {

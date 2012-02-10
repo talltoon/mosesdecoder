@@ -94,21 +94,17 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
   InputFileStream inFile(filePath);
 
   string line, prevSourcePhrase = "";
-  size_t count = 0;
+  size_t phr_num = 0;
   size_t line_num = 0;
   size_t numElement = NOT_FOUND; // 3=old format, 5=async format which include word alignment info
   
-  std::cerr << "Reading in phrase table ";
+  std::cerr << "Reading in phrase table" << std::endl;
   
   StringVector<unsigned char, unsigned long, MmapAllocator> packedTargetPhrases;
   
   std::stringstream targetStream;
-  while(getline(inFile, line)) {    
+  while(getline(inFile, line)) {
     ++line_num;
-    if(line_num % 100000 == 0)
-      std::cerr << ".";
-    if(line_num % 1000000 == 0)
-      std::cerr << "[" << line_num << "]";
     std::vector<string> tokens = TokenizeMultiCharSeparator( line , "|||" );
   
     if (numElement == NOT_FOUND) {
@@ -136,6 +132,12 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
     }
     
     if(sourcePhraseString != prevSourcePhrase && prevSourcePhrase != "") {
+      ++phr_num;
+      if(phr_num % 100000 == 0)
+        std::cerr << ".";
+      if(phr_num % 5000000 == 0)
+        std::cerr << "[" << phr_num << "]" << std::endl;
+      
       m_hash.AddKey(Trim(prevSourcePhrase));
       std::string temp = targetStream.str();
 
@@ -150,13 +152,21 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
     //if(tokens.size() > 3)
       //PackAlignment(tokens[3], targetStream);
     
-    count++;
   }
   
+  ++phr_num;
+  if(phr_num % 100000 == 0)
+    std::cerr << ".";
+  if(phr_num % 5000000 == 0)
+    std::cerr << "[" << phr_num << "]" << std::endl;
+
   m_hash.AddKey(Trim(prevSourcePhrase));
   std::string temp = targetStream.str();
   packedTargetPhrases.push_back(temp);
   std::cerr << std::endl;
+  
+  m_hash.Create();
+  m_hash.ClearKeys();
   
   std::cerr << "Creating Huffman tree for " << symbolCount.size() << " symbols" << std::endl;
   m_treeSymbols = new Hufftree<int, size_t>(symbolCount.begin(), symbolCount.end());
@@ -217,29 +227,14 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
   
   //m_treeAlignments = new Hufftree<int, unsigned char>(alignCount.begin(), alignCount.end());
   
-  m_hash.Create();
-  
-  std::cerr << "Mapping hash values ";
-  std::vector<size_t> map(m_hash.GetSize());
+  std::cerr << "Reordering and compressing target phrases" << std::endl;
   for(size_t i = 0; i < m_hash.GetSize(); i++) {
     if((i+1) % 100000 == 0)
       std::cerr << ".";
-    if((i+1) % 1000000 == 0)
-      std::cerr << "[" << (i+1) << "]";  
-    size_t j = m_hash.GetHashByIndex(i);
-    if(j != m_hash.GetSize())
-        map[j] = i;
-  }
-  std::cerr << std::endl;
-  
-  std::cerr << "Reordering and compressing target phrases ";
-  for(size_t i = 0; i < map.size(); i++) {
-    if((i+1) % 100000 == 0)
-      std::cerr << ".";
-    if((i+1) % 1000000 == 0)
-      std::cerr << "[" << (i+1) << "]";
+    if((i+1) % 5000000 == 0)
+      std::cerr << "[" << (i+1) << "]" << std::endl;
     
-    std::stringstream packedPhrase(packedTargetPhrases[map[i]].str());
+    std::stringstream packedPhrase(packedTargetPhrases[m_hash.GetMapPos(i)].str());
     packedPhrase.unsetf(std::ios::skipws);
     
     std::vector<size_t> symbols;
@@ -271,8 +266,7 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
     m_targetPhrases.push_back(compressedPhrase.str());
   }
   std::cerr << std::endl;
-  m_hash.ClearKeys();
- 
+  
   return true;
 }
 
@@ -341,8 +335,7 @@ std::string PhraseDictionaryMemoryHashed::GetTargetSymbol(size_t idx) const {
 void PhraseDictionaryMemoryHashed::PackTargetPhrase(std::string targetPhrase, std::ostream& os) {
   std::vector<std::string> words = Tokenize(targetPhrase);
   unsigned char c = (unsigned char) words.size();
-  os.write((char*) &c, 1);
-  
+  os.write((char*) &c, 1);  
   for(size_t i = 0; i < words.size(); i++) {
     size_t idx = AddOrGetTargetSymbol(words[i]);
     os.write((char*)&idx, sizeof(idx));
@@ -354,14 +347,11 @@ void PhraseDictionaryMemoryHashed::PackTargetPhrase(std::string targetPhrase, st
 void PhraseDictionaryMemoryHashed::PackScores(std::string scores, std::ostream& os) {
   std::stringstream ss(scores);
   float score;
-  size_t c = 0;
   while(ss >> score) {
     score = FloorScore(TransformScore(score));
     os.write((char*)&score, sizeof(score));
     scoreCount[score]++;
-    c++;
   }
-  //scoreCount[c]++;
 }
 
 void PhraseDictionaryMemoryHashed::PackAlignment(std::string alignment, std::ostream& os) {

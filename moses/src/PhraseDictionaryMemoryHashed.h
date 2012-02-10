@@ -56,6 +56,19 @@ protected:
   typedef boost::unordered_map<float, size_t> ScoreCounter;
   typedef boost::unordered_map<unsigned char, size_t> AlignCounter;
   
+  SymbolCounter symbolCount;
+  ScoreCounter  scoreCount;
+  AlignCounter  alignCount; 
+  
+  HashIndex<MmapAllocator, std::allocator> m_hash;
+  StringVector<unsigned char, size_t, std::allocator> m_targetSymbols;
+  std::map<std::string, size_t> m_targetSymbolsMap;
+  StringVector<unsigned char, size_t, MmapAllocator> m_targetPhrases;
+  
+  Hufftree<int, size_t>* m_treeSymbols;
+  Hufftree<int, float>* m_treeScores;
+  Hufftree<int, unsigned char>* m_treeAlignments;
+
   PhraseTableImplementation m_implementation;
   
   const std::vector<FactorType>* m_input;
@@ -64,20 +77,7 @@ protected:
   const std::vector<float>* m_weight;
   const LMList* m_languageModels;
   float m_weightWP;
-  
-  HashIndex m_hash;
-  StringVector<unsigned char, size_t> m_targetSymbols;
-  std::map<std::string, size_t> m_targetSymbolsMap;
-  StringVector<unsigned char, size_t, MmapAllocator> m_targetPhrases;
-  
-  SymbolCounter symbolCount;
-  ScoreCounter  scoreCount;
-  AlignCounter  alignCount; 
-  
-  Hufftree<int, size_t>* m_treeSymbols;
-  Hufftree<int, float>* m_treeScores;
-  Hufftree<int, unsigned char>* m_treeAlignments;
-   
+     
   void PackTargetPhrase(std::string, std::ostream&);
   void PackScores(std::string, std::ostream&);
   void PackAlignment(std::string, std::ostream&);
@@ -104,8 +104,8 @@ public:
                                PhraseTableImplementation implementation,
                                PhraseDictionaryFeature* feature)
     : PhraseDictionary(numScoreComponent, feature),
-    m_implementation(implementation), m_hash(HashIndex(CMPH_CHM))
-    , m_treeSymbols(0), m_treeScores(0), m_treeAlignments(0)
+    m_implementation(implementation), m_treeSymbols(0),
+    m_treeScores(0), m_treeAlignments(0)
   {}
     
   virtual ~PhraseDictionaryMemoryHashed();
@@ -147,13 +147,15 @@ public:
     for(std::vector<TargetPhraseCollection*>::iterator it = ref.begin();
         it != ref.end(); it++)
         delete *it;
-    ref.clear();
+    std::vector<TargetPhraseCollection*> temp;
+    temp.swap(ref);
     #endif
     #else
     for(std::vector<TargetPhraseCollection*>::iterator it = m_sentenceCache.begin();
         it != m_sentenceCache.end(); it++)
         delete *it;
-    m_sentenceCache.clear();
+    std::vector<TargetPhraseCollection*> temp;
+    temp.swap(m_sentenceCache);
     #endif
   }
 

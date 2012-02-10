@@ -67,7 +67,7 @@ namespace Moses {
         ~MmapAllocator() throw() {
             if(m_data_ptr) {
                 munmap(m_data_ptr, m_map_size);
-                if(!m_fixed)
+                if(!m_fixed && std::ftell(m_file_ptr) != -1)
                     std::fclose(m_file_ptr);
             }
         }

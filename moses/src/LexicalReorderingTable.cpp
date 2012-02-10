@@ -332,7 +332,7 @@ void  LexicalReorderingTableMemoryHashed::LoadText(const std::string& filePath)
   std::vector<char*> tempScores;
   std::map<float, size_t> frequencies;
   
-  std::cerr << "Reading in reordering table ";
+  std::cerr << "Reading in reordering table" << std::endl;
   
   std::string fileName = filePath;
   if(!FileExists(fileName) && FileExists(fileName+".gz")) {
@@ -346,8 +346,8 @@ void  LexicalReorderingTableMemoryHashed::LoadText(const std::string& filePath)
     ++line_num;
     if(line_num % 100000 == 0)
       std::cerr << ".";
-    if(line_num % 1000000 == 0)
-      std::cerr << "[" << line_num << "]";
+    if(line_num % 5000000 == 0)
+      std::cerr << "[" << line_num << "]" << std::endl;
       
     std::vector<std::string> tokens = TokenizeMultiCharSeparator(line, "|||");
     int t = 0 ;
@@ -392,6 +392,9 @@ void  LexicalReorderingTableMemoryHashed::LoadText(const std::string& filePath)
   }
   std::cerr << std::endl;
   
+  m_hash.Create();
+  m_hash.ClearKeys();
+  
   std::cerr << "Creating Huffman compression tree for " << frequencies.size() << " symbols" << std::endl;
   m_tree = new Hufftree<int, float>(frequencies.begin(), frequencies.end());
   
@@ -403,31 +406,17 @@ void  LexicalReorderingTableMemoryHashed::LoadText(const std::string& filePath)
   std::cerr << "Average no. of bytes per encoded (decoded) symbol: " << (len_sum/freq_sum)/8
             << " (" << sizeof(float) << ")" << std::endl;
   
-  m_hash.Create();
-  
-  std::cerr << "Mapping hash values ";
-  std::vector<size_t> map(m_hash.GetSize());
-  for(size_t i = 0; i < m_hash.GetSize(); i++) {
-    if((i+1) % 100000 == 0)
-      std::cerr << ".";
-    if((i+1) % 1000000 == 0)
-      std::cerr << "[" << i+1 << "]";
-    size_t j = m_hash.GetHashByIndex(i);
-    if(j != m_hash.GetSize())
-        map[j] = i;
-  }
-  m_hash.ClearKeys();
   std::cerr << std::endl;
   
-  std::cerr << "Reordering and compressing target phrases ";
+  std::cerr << "Reordering and compressing target phrases" << std::endl;
   for(size_t i = 0; i < m_hash.GetSize(); i++) {
     if((i+1) % 100000 == 0)
       std::cerr << ".";
-    if((i+1) % 1000000 == 0)
-      std::cerr << "[" << i+1 << "]";
+    if((i+1) % 5000000 == 0)
+      std::cerr << "[" << i+1 << "]" << std::endl;
       
     std::vector<float> p(numScores, 0);
-    char* cstring = tempScores[map[i]];
+    char* cstring = tempScores[m_hash.GetMapPos(i)];
     std::memcpy(&p[0], cstring, numScores * sizeof(float));
     delete[] cstring;
     
