@@ -60,7 +60,7 @@ protected:
   ScoreCounter  scoreCount;
   AlignCounter  alignCount; 
   
-  HashIndex<MmapAllocator, std::allocator> m_hash;
+  HashIndex<std::allocator, MmapAllocator> m_hash;
   StringVector<unsigned char, size_t, std::allocator> m_targetSymbols;
   std::map<std::string, size_t> m_targetSymbolsMap;
   StringVector<unsigned char, size_t, MmapAllocator> m_targetPhrases;

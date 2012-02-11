@@ -16,16 +16,19 @@
 
 namespace Moses {
 
-template <template <typename> class Allocator1 = MmapAllocator,
-          template <typename> class Allocator2 = std::allocator>
+template <template <typename> class Allocator1 = std::allocator,
+          template <typename> class Allocator2 = MmapAllocator>
 class HashIndex {
   private:
     typedef unsigned int Fprint;
-    typedef StringVector<unsigned char, size_t, Allocator1> SV;
+    typedef unsigned int PosType;
     
+    std::vector<Fprint, Allocator1<Fprint> > m_fprints;
+    std::vector<PosType, Allocator1<PosType> > m_posMap;
+    
+    typedef StringVector<unsigned char, size_t, Allocator2> SV;
     SV m_keys;
-    std::vector<Fprint, Allocator2<Fprint> > m_fprints;
-    std::vector<size_t> m_posMap;
+
     
     CMPH_ALGO m_algo;
     cmph_t* m_hash;
@@ -82,7 +85,7 @@ class HashIndex {
     size_t GetHash(const char* key) const {
         size_t idx = cmph_search(m_hash, key, (cmph_uint32) strlen(key));
         if(GetFprint(key) == m_fprints[idx])
-            return idx;
+            return m_posMap[idx];
         else
             return GetSize();
     }
@@ -139,6 +142,7 @@ class HashIndex {
         
         size_t nkeys = m_fprints.size();
         std::fwrite(&nkeys, sizeof(nkeys), 1, mphf);
+        std::fwrite(&m_posMap[0], sizeof(PosType), nkeys, mphf);
         std::fwrite(&m_fprints[0], sizeof(Fprint), nkeys, mphf);
     }
     
@@ -148,11 +152,17 @@ class HashIndex {
     }
     
     void Load(std::FILE * mphf) {
+        size_t a = std::ftell(mphf);
         m_hash = cmph_load(mphf);
+        size_t b = std::ftell(mphf);
+        
+        std::cerr << "Size: " << float(b - a)/(1024*1024) << std::endl;
         
         size_t nkeys;
         std::fread(&nkeys, sizeof(nkeys), 1, mphf);
         m_fprints.resize(nkeys, 0);
+        m_posMap.resize(nkeys, 0);
+        std::fread(&m_posMap[0], sizeof(PosType), nkeys, mphf);
         std::fread(&m_fprints[0], sizeof(Fprint), nkeys, mphf);
     }
     

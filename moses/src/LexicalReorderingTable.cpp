@@ -403,12 +403,8 @@ void  LexicalReorderingTableMemoryHashed::LoadText(const std::string& filePath)
     len_sum  += it->second * m_tree->encode(it->first).size();
     freq_sum += it->second;
   }
-  std::cerr << "Average no. of bytes per encoded (decoded) symbol: " << (len_sum/freq_sum)/8
-            << " (" << sizeof(float) << ")" << std::endl;
-  
-  std::cerr << std::endl;
-  
-  std::cerr << "Reordering and compressing target phrases" << std::endl;
+  std::cerr << "Average no. of bits per score: " << (len_sum/freq_sum) << std::endl;
+  std::cerr << "Compressing target phrases" << std::endl;
   for(size_t i = 0; i < m_hash.GetSize(); i++) {
     if((i+1) % 100000 == 0)
       std::cerr << ".";
@@ -416,7 +412,7 @@ void  LexicalReorderingTableMemoryHashed::LoadText(const std::string& filePath)
       std::cerr << "[" << i+1 << "]" << std::endl;
       
     std::vector<float> p(numScores, 0);
-    char* cstring = tempScores[m_hash.GetMapPos(i)];
+    char* cstring = tempScores[i];
     std::memcpy(&p[0], cstring, numScores * sizeof(float));
     delete[] cstring;
     
