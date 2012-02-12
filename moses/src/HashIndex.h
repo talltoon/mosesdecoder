@@ -152,18 +152,27 @@ class HashIndex {
     }
     
     void Load(std::FILE * mphf) {
-        size_t a = std::ftell(mphf);
+        size_t a1 = std::ftell(mphf);
         m_hash = cmph_load(mphf);
-        size_t b = std::ftell(mphf);
+        size_t a2 = std::ftell(mphf);
         
-        std::cerr << "Size: " << float(b - a)/(1024*1024) << std::endl;
+        std::cerr << "CMPH size: " << float(a2 - a1)/(1024*1024) << " Mb" << std::endl;
         
         size_t nkeys;
         std::fread(&nkeys, sizeof(nkeys), 1, mphf);
         m_fprints.resize(nkeys, 0);
         m_posMap.resize(nkeys, 0);
+
         std::fread(&m_posMap[0], sizeof(PosType), nkeys, mphf);
+        size_t a3 = std::ftell(mphf);
+        std::cerr << "PosMap size: " << float(a3 - a2)/(1024*1024) << " Mb" << std::endl;
+
         std::fread(&m_fprints[0], sizeof(Fprint), nkeys, mphf);
+        size_t a4 = std::ftell(mphf);
+        std::cerr << "Fprints size: " << float(a4 - a3)/(1024*1024) << " Mb" << std::endl;
+
+        std::cerr << "Total HashIndex size: " << float(a4 - a1)/(1024*1024) << " Mb" << std::endl;
+
     }
     
     size_t GetSize() const {
