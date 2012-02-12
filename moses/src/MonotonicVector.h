@@ -46,7 +46,11 @@ class MonotonicVector {
       
       PosT k = 0;
       k += VarInt32::decodeAndSum(it, m_diffs.end(), 1);
-      k += Simple9::decodeAndSum(it, m_diffs.end(), r);
+      if(j < m_anchors.size())
+        k += Simple9::decodeAndSum(it, m_diffs.end(), r);
+      else if(j == m_anchors.size())
+        for(int l = 0; l < r; l++)
+          k += m_tempDiffs[l];
       
       return k;
     }
