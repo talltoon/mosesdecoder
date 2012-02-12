@@ -17,7 +17,7 @@
 
 namespace Moses {
 
-template<typename PosT = size_t, typename NumT = size_t, PosT stepSize = 100>
+template<typename PosT = size_t, typename NumT = size_t, PosT stepSize = 32>
 class MonotonicVector {
   private:
     std::vector<NumT> m_anchors;

@@ -51,7 +51,7 @@ template <typename ValueT = unsigned char, typename PosT = unsigned int,
 class StringVector {    
   protected:
     std::vector<ValueT, Allocator<ValueT> > m_charArray;
-    MonotonicVector<PosT, unsigned short, 20> m_positions;
+    MonotonicVector<PosT, unsigned int, 32> m_positions;
     bool m_sorted;
     bool m_memoryMapped;
 
