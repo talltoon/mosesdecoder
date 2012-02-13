@@ -133,60 +133,57 @@ class Simple9 {
     }
     
     template <typename OutIt>
-    static void decodeSymbol(uint input, OutIt outIt) {
+    static inline void decodeSymbol(uint input, OutIt outIt) {
         uint type = (input >> 28);
         
-        uint bitlength;
-        uint length;
+        uint bitlen;
+        uint shift;
+        uint mask;
+        
         switch(type) {
-          case 1: length = 1;  bitlength = 28; break;
-          case 2: length = 2;  bitlength = 14; break;
-          case 3: length = 3;  bitlength = 9;  break;
-          case 4: length = 4;  bitlength = 7;  break;
-          case 5: length = 5;  bitlength = 5;  break;
-          case 6: length = 7;  bitlength = 4;  break;
-          case 7: length = 9;  bitlength = 3;  break;
-          case 8: length = 14; bitlength = 2;  break;
-          case 9: length = 28; bitlength = 1;  break;
+          case 1: bitlen = 28; shift = 0;  mask = 268435455; break;
+          case 2: bitlen = 14; shift = 14; mask = 16383; break;
+          case 3: bitlen = 9;  shift = 18; mask = 511; break;
+          case 4: bitlen = 7;  shift = 24; mask = 127; break;
+          case 5: bitlen = 5;  shift = 20; mask = 31; break;
+          case 6: bitlen = 4;  shift = 24; mask = 15; break;
+          case 7: bitlen = 3;  shift = 24; mask = 7; break;
+          case 8: bitlen = 2;  shift = 26; mask = 3; break;
+          case 9: bitlen = 1;  shift = 27; mask = 1; break;
         }
       
-        uint mask = (1 << bitlength)-1;
-        uint shift = bitlength * (length-1);
-        
         while(shift > 0) {
           *outIt = (input >> shift) & mask;
-          shift -= bitlength;  
+          shift -= bitlen;  
           outIt++;
         }
         *outIt = input & mask;
         outIt++;  
     }
     
-    static size_t decodeAndSumSymbol(uint input, size_t num, size_t &curr) {
+    static inline size_t decodeAndSumSymbol(uint input, size_t num, size_t &curr) {
         uint type = (input >> 28);
         
-        uint bitlength;
-        uint length;
+        uint bitlen;
+        uint shift;
+        uint mask;
+        
         switch(type) {
-          case 1: length = 1;  bitlength = 28; break;
-          case 2: length = 2;  bitlength = 14; break;
-          case 3: length = 3;  bitlength = 9;  break;
-          case 4: length = 4;  bitlength = 7;  break;
-          case 5: length = 5;  bitlength = 5;  break;
-          case 6: length = 7;  bitlength = 4;  break;
-          case 7: length = 9;  bitlength = 3;  break;
-          case 8: length = 14; bitlength = 2;  break;
-          case 9: length = 28; bitlength = 1;  break;
+          case 1: bitlen = 28; shift = 0;  mask = 268435455; break;
+          case 2: bitlen = 14; shift = 14; mask = 16383; break;
+          case 3: bitlen = 9;  shift = 18; mask = 511; break;
+          case 4: bitlen = 7;  shift = 24; mask = 127; break;
+          case 5: bitlen = 5;  shift = 20; mask = 31; break;
+          case 6: bitlen = 4;  shift = 24; mask = 15; break;
+          case 7: bitlen = 3;  shift = 24; mask = 7; break;
+          case 8: bitlen = 2;  shift = 26; mask = 3; break;
+          case 9: bitlen = 1;  shift = 27; mask = 1; break;
         }
-      
-        uint mask = (1 << bitlength)-1;
-        uint shift = bitlength * (length-1);
 
         size_t sum = 0;
-        
         while(shift > 0) {
           sum += (input >> shift) & mask;
-          shift -= bitlength;
+          shift -= bitlen;
           if(++curr == num)
             return sum;
         }
@@ -199,8 +196,6 @@ class Simple9 {
     template <typename InIt, typename OutIt>
     static void encode(InIt it, InIt end, OutIt outIt) {        
         uint parts[] = { 1, 2, 3, 4, 5, 7, 9, 14, 28 };
-        uint bits[]  = { 0, 1, 2, 3, 4, 5, 7, 7, 9, 9, 14, 14, 14, 14, 14,
-          28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28 };
 
         uint buffer[28];
         for(InIt i = it; i < end; i++) {
@@ -219,7 +214,7 @@ class Simple9 {
                 uint reqbit = ceil(log(buffer[lastpos]+1)/log2);
                 assert(reqbit <= 28);
                 
-                uint bit = bits[reqbit];
+                uint bit = 28/floor(28/reqbit);
                 if(lastbit < bit)
                     lastbit = bit;
                     
