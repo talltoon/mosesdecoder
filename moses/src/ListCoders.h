@@ -2,6 +2,7 @@
 #define LISTCODERS_H__
 
 #include <cmath>
+#include <cassert>
 
 namespace Moses {
 
@@ -103,10 +104,25 @@ class Simple9 {
     template <typename InIt>
     inline static void encodeSymbol(uint &output, InIt it, InIt end) {
         uint length = end - it;
-        uint bitlength = 28/length;
+      
+        uint type;
+        uint bitlength;
+        
+        switch(length) {
+          case 1:  type = 1; bitlength = 28; break;
+          case 2:  type = 2; bitlength = 14; break;
+          case 3:  type = 3; bitlength = 9;  break;
+          case 4:  type = 4; bitlength = 7;  break;
+          case 5:  type = 5; bitlength = 5;  break;
+          case 7:  type = 6; bitlength = 4;  break;
+          case 9:  type = 7; bitlength = 3;  break;
+          case 14: type = 8; bitlength = 2;  break;
+          case 28: type = 9; bitlength = 1;  break;
+        }
+      
         output = 0;
-        output |= (length << 28);
-
+        output |= (type << 28);
+ 
         uint i = 0;
         while(it != end) {
             uint l = bitlength * (length-i-1);
@@ -118,10 +134,25 @@ class Simple9 {
     
     template <typename OutIt>
     static void decodeSymbol(uint input, OutIt outIt) {
-        uint length = (input >> 28);
-        uint bitlength = 28/length;
+        uint type = (input >> 28);
+        
+        uint bitlength;
+        uint length;
+        switch(type) {
+          case 1: length = 1;  bitlength = 28; break;
+          case 2: length = 2;  bitlength = 14; break;
+          case 3: length = 3;  bitlength = 9;  break;
+          case 4: length = 4;  bitlength = 7;  break;
+          case 5: length = 5;  bitlength = 5;  break;
+          case 6: length = 7;  bitlength = 4;  break;
+          case 7: length = 9;  bitlength = 3;  break;
+          case 8: length = 14; bitlength = 2;  break;
+          case 9: length = 28; bitlength = 1;  break;
+        }
+      
         uint mask = (1 << bitlength)-1;
         uint shift = bitlength * (length-1);
+        
         while(shift > 0) {
           *outIt = (input >> shift) & mask;
           shift -= bitlength;  
@@ -132,11 +163,25 @@ class Simple9 {
     }
     
     static size_t decodeAndSumSymbol(uint input, size_t num, size_t &curr) {
-        uint length = (input >> 28);
-        uint bitlength = 28/length;
-        uint mask = (1 << bitlength)-1;
+        uint type = (input >> 28);
         
+        uint bitlength;
+        uint length;
+        switch(type) {
+          case 1: length = 1;  bitlength = 28; break;
+          case 2: length = 2;  bitlength = 14; break;
+          case 3: length = 3;  bitlength = 9;  break;
+          case 4: length = 4;  bitlength = 7;  break;
+          case 5: length = 5;  bitlength = 5;  break;
+          case 6: length = 7;  bitlength = 4;  break;
+          case 7: length = 9;  bitlength = 3;  break;
+          case 8: length = 14; bitlength = 2;  break;
+          case 9: length = 28; bitlength = 1;  break;
+        }
+      
+        uint mask = (1 << bitlength)-1;
         uint shift = bitlength * (length-1);
+
         size_t sum = 0;
         
         while(shift > 0) {

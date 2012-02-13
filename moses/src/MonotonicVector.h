@@ -12,6 +12,7 @@
 #include <limits>
 #include <algorithm>
 #include <cstdio>
+#include <cassert>
 
 #include "ListCoders.h"
 
@@ -128,6 +129,9 @@ class MonotonicVector {
     }
     
     bool save(std::FILE* out) {
+      if(!m_final)
+        commit();
+      
       bool ok = true;
       ok &= sizeof(bool) == fwrite(&m_final, sizeof(bool), 1, out);
       ok &= sizeof(size_t) == fwrite(&m_size, sizeof(size_t), 1, out);
@@ -146,6 +150,9 @@ class MonotonicVector {
     }
     
     void swap(MonotonicVector<PosT, NumT, stepSize> &mv) {
+      if(!m_final)
+        commit();
+        
       m_diffs.swap(mv.m_diffs);
       m_anchors.swap(mv.m_anchors);
     }
