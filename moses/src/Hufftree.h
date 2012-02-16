@@ -63,6 +63,14 @@ template<typename PosType, typename DataType> class Hufftree {
   
     template<typename InputIterator, typename OutputIterator>
     void decodeWithLength(InputIterator begin, InputIterator end, OutputIterator iter);
+    
+    inline PosType node(size_t i) {
+      return m_nodes[i];
+    }
+
+    inline DataType data(size_t i) {
+      return m_data[i];
+    }
   
   private:
     typedef boost::unordered_map<DataType, std::vector<bool> > encodemap;
