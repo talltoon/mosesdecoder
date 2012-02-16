@@ -28,17 +28,23 @@ class PhraseCoder {
   private:
     typedef boost::unordered_map<size_t, size_t> SymbolCounter;
     typedef boost::unordered_map<float, size_t> ScoreCounter;
-    typedef boost::unordered_map<unsigned char, size_t> AlignCounter;
+    typedef std::pair<unsigned char, unsigned char> AlignPoint;
+    typedef boost::unordered_map<AlignPoint, size_t> AlignCounter;
     
-    SymbolCounter symbolCount;
-    ScoreCounter  scoreCount;
-    AlignCounter  alignCount; 
+    bool m_compactEncoding;
+    bool m_treeForEachScore;
+    bool m_containsAlignmentInfo;
+    
+    SymbolCounter m_symbolCount;
+    std::vector<ScoreCounter> m_scoreCounts;
+    AlignCounter m_alignCount; 
   
     StringVector<unsigned char, unsigned, std::allocator> m_targetSymbols;
     std::map<std::string, unsigned> m_targetSymbolsMap;
     
     Hufftree<int, unsigned>* m_symbolTree;
-    Hufftree<int, float>* m_scoreTree;
+    std::vector<Hufftree<int, float>*> m_scoreTrees;
+    Hufftree<int, AlignPoint>* m_alignTree;
     
     // ***********************************************
     
@@ -48,6 +54,8 @@ class PhraseCoder {
     const std::vector<float>* m_weight;
     float m_weightWP;
     const LMList* m_languageModels;
+  
+    // ***********************************************
   
     unsigned AddOrGetTargetSymbol(std::string symbol) {
       std::map<std::string, unsigned>::iterator it = m_targetSymbolsMap.find(symbol);
@@ -70,39 +78,41 @@ class PhraseCoder {
   
   void packTargetPhrase(std::string targetPhrase, std::ostream& os) {
     std::vector<std::string> words = Tokenize(targetPhrase);
-    //unsigned char c = (unsigned char) words.size() + 1;
-    //os.write((char*) &c, 1);  
-    
     unsigned stpIdx = AddOrGetTargetSymbol("__SPECIAL_STOP_SYMBOL__");
     for(size_t i = 0; i < words.size(); i++) {
       unsigned idx = AddOrGetTargetSymbol(words[i]);
       os.write((char*)&idx, sizeof(idx));
-      symbolCount[idx]++;
+      m_symbolCount[idx]++;
     }
     os.write((char*)&stpIdx, sizeof(stpIdx));
-    symbolCount[stpIdx]++;
+    m_symbolCount[stpIdx]++;
   }
   
   void packScores(std::string scores, std::ostream& os) {
     std::stringstream ss(scores);
     float score;
+    size_t c = 0;
+    size_t scoreTypes = m_scoreCounts.size();
     while(ss >> score) {
       score = FloorScore(TransformScore(score));
       os.write((char*)&score, sizeof(score));
-      scoreCount[score]++;
+      m_scoreCounts[c % scoreTypes][score]++;
+      c++;
     }
   }
   
   void packAlignment(std::string alignment, std::ostream& os) {
-    std::vector<size_t> positions = Tokenize<size_t>(alignment, " \t-");
-    unsigned char c = positions.size();
-    os.write((char*) &c, 1);
-    for(size_t i = 0; i < positions.size(); i++) {
-      unsigned char position = positions[i];
-      os.write((char*)&position, sizeof(position));
-      alignCount[position]++;
+    std::vector<unsigned char> positions
+      = Tokenize<unsigned char>(alignment, " \t-");
+    
+    for(size_t i = 0; i < positions.size(); i+=2) {
+      AlignPoint ap(positions[i], positions[i+1]);
+      os.write((char*)&ap, sizeof(AlignPoint));
+      m_alignCount[ap]++;
     }
-    alignCount[c]++;
+    AlignPoint stop(-1, -1);
+    m_alignCount[stop]++;
+    os.write((char*) &stop, sizeof(AlignPoint));
   }
 
   public:
@@ -116,51 +126,97 @@ class PhraseCoder {
       float weightWP,
       const LMList* languageModels
     )
-    : m_output(output), m_feature(feature), m_numScoreComponent(numScoreComponent),
-      m_weight(weight), m_weightWP(weightWP), m_languageModels(languageModels),
-      m_symbolTree(0), m_scoreTree(0)
+    : m_compactEncoding(false), m_treeForEachScore(false),
+      m_containsAlignmentInfo(false), m_output(output), m_feature(feature),
+      m_numScoreComponent(numScoreComponent),
+      m_weight(weight),
+      m_weightWP(weightWP), m_languageModels(languageModels),
+      m_symbolTree(0),
+      m_alignTree(0),
+      m_scoreCounts(m_treeForEachScore ? m_numScoreComponent : 1),
+      m_scoreTrees(m_treeForEachScore ? m_numScoreComponent : 1, 0)
     { }
     
     ~PhraseCoder() {
       if(m_symbolTree)
         delete m_symbolTree;
-      if(m_scoreTree)
-        delete m_scoreTree;
+      
+      for(size_t i = 0; i < m_scoreTrees.size(); i++)
+        if(m_scoreTrees[i])
+          delete m_scoreTrees[i];
+      
+      if(m_alignTree)
+        delete m_alignTree;
     }
     
     void load(std::FILE* in) {
+      std::fread(&m_treeForEachScore, sizeof(bool), 1, in);
+      std::fread(&m_containsAlignmentInfo, sizeof(bool), 1, in);
+      
       m_targetSymbols.load(in);
       m_symbolTree = new Hufftree<int, unsigned>(in);
-      m_scoreTree = new Hufftree<int, float>(in);
+      
+      size_t numTrees = m_treeForEachScore ? m_numScoreComponent : 1;
+      for(int i = 0; i < numTrees; i++)
+        m_scoreTrees.push_back(new Hufftree<int, float>(in));
+      
+      if(m_containsAlignmentInfo)
+        m_alignTree = new Hufftree<int, AlignPoint>(in);
     }
     
     void save(std::FILE* out) {
+      std::fwrite(&m_treeForEachScore, sizeof(bool), 1, out);
+      std::fwrite(&m_containsAlignmentInfo, sizeof(bool), 1, out);
+      
       m_targetSymbols.save(out);
       m_symbolTree->Save(out);
-      m_scoreTree->Save(out);
+      
+      size_t numTrees = m_treeForEachScore ? m_numScoreComponent : 1;
+      for(int i = 0; i < numTrees; i++)
+        m_scoreTrees[i]->Save(out);
+      
+      if(m_containsAlignmentInfo)
+        m_alignTree->Save(out);
     }
     
     void calcHuffmanCodes() {
-      std::cerr << "Creating Huffman codes for " << symbolCount.size() << " symbols" << std::endl;
-      m_symbolTree = new Hufftree<int, unsigned>(symbolCount.begin(), symbolCount.end());      
+      std::cerr << "Creating Huffman codes for " << m_symbolCount.size() << " symbols" << std::endl;
+      m_symbolTree = new Hufftree<int, unsigned>(m_symbolCount.begin(), m_symbolCount.end());      
       {
         size_t sum = 0, sumall = 0;
-        for(SymbolCounter::iterator it = symbolCount.begin(); it != symbolCount.end(); it++) {
+        for(SymbolCounter::iterator it = m_symbolCount.begin(); it != m_symbolCount.end(); it++) {
           sumall += it->second * m_symbolTree->encode(it->first).size();
           sum    += it->second;
         }
         std::cerr << double(sumall)/sum << " bits per symbol" << std::endl;
       }
       
-      std::cerr << "Creating Huffman codes for " << scoreCount.size() << " scores" << std::endl;
-      m_scoreTree = new Hufftree<int, float>(scoreCount.begin(), scoreCount.end());
-      {  
-        size_t sum = 0, sumall = 0;
-        for(ScoreCounter::iterator it = scoreCount.begin(); it != scoreCount.end(); it++) {
-          sumall += it->second * m_scoreTree->encode(it->first).size();
-          sum    += it->second;
+      for(size_t i = 0; i < m_scoreCounts.size(); i++) {
+        if(m_scoreCounts.size() > 1)
+          std::cerr << "Encoding scores of type " << (i+1) << std::endl;
+        std::cerr << "Creating Huffman codes for " << m_scoreCounts[i].size() << " scores" << std::endl;
+        m_scoreTrees[i] = new Hufftree<int, float>(m_scoreCounts[i].begin(), m_scoreCounts[i].end());
+        {  
+          size_t sum = 0, sumall = 0;
+          for(ScoreCounter::iterator it = m_scoreCounts[i].begin(); it != m_scoreCounts[i].end(); it++) {
+            sumall += it->second * m_scoreTrees[i]->encode(it->first).size();
+            sum    += it->second;
+          }
+          std::cerr << double(sumall)/sum << " bits per score" << std::endl;
         }
-        std::cerr << double(sumall)/sum << " bits per score" << std::endl;
+      }
+      
+      if(m_containsAlignmentInfo) {
+        std::cerr << "Creating Huffman codes for " << m_alignCount.size() << " alignment points" << std::endl;
+        m_alignTree = new Hufftree<int, AlignPoint>(m_alignCount.begin(), m_alignCount.end());
+        {  
+          size_t sum = 0, sumall = 0;
+          for(AlignCounter::iterator it = m_alignCount.begin(); it != m_alignCount.end(); it++) {
+            sumall += it->second * m_alignTree->encode(it->first).size();
+            sum    += it->second;
+          }
+          std::cerr << double(sumall)/sum << " bits per alignment point" << std::endl;
+        }
       }
     }
     
@@ -171,7 +227,8 @@ class PhraseCoder {
       for(StringCollection::iterator it = collection.begin(); it != collection.end(); it++) {
         packTargetPhrase((*it)[1], packedCollectionStream);
         packScores((*it)[2], packedCollectionStream);
-        //packAlignment((*it)[3], packedCollectionStream);        
+        if(m_containsAlignmentInfo)
+          packAlignment((*it)[3], packedCollectionStream);        
       }
       
       return packedCollectionStream.str();
@@ -185,6 +242,8 @@ class PhraseCoder {
       EncodeState state = ReadSymbol;
       
       unsigned phraseStopSymbol = m_targetSymbolsMap["__SPECIAL_STOP_SYMBOL__"];
+      AlignPoint alignStopSymbol(-1, -1);
+      size_t scoreTypes = m_scoreTrees.size();
       
       std::stringstream packedStream(packedCollection);
       packedStream.unsetf(std::ios::skipws);
@@ -195,8 +254,11 @@ class PhraseCoder {
       unsigned int pos = 0;
       
       unsigned symbol;
+      
       float score;
       size_t currScore = 0;
+      
+      AlignPoint alignPoint;
       
       while(packedStream) {
         switch(state) {
@@ -210,13 +272,13 @@ class PhraseCoder {
               state = ReadAlignment;
             }
             else {
-              currScore++;
               packedStream.read((char*) &score, sizeof(float));
+              currScore++;
               state = EncodeScore;
             }
             break;
           case ReadAlignment:
-            // ..
+            packedStream.read((char*) &alignPoint, sizeof(AlignPoint));
             state = EncodeAlignment;
             break;
           case EncodeSymbol:
@@ -224,7 +286,6 @@ class PhraseCoder {
           case EncodeAlignment:
             std::vector<bool> code;
             if(state == EncodeSymbol) {
-              //std::cerr << symbol << " " << GetTargetSymbol(symbol) << std::endl;
               code = m_symbolTree->encode(symbol);
               if(symbol == phraseStopSymbol)
                 state = ReadScore;
@@ -232,15 +293,21 @@ class PhraseCoder {
                 state = ReadSymbol;
             }
             else if(state == EncodeScore) {
-              //std::cerr << score << std::endl;
-              code = m_scoreTree->encode(score);
+              code = m_scoreTrees[(currScore-1) % scoreTypes]->encode(score);
               state = ReadScore;
             }
-            else {
-              // ...
-              code = std::vector<bool>();
-              state = ReadSymbol;
-              break;
+            else if(state == EncodeAlignment) {
+              if(m_containsAlignmentInfo) {
+                code = m_alignTree->encode(alignPoint);
+                if(alignPoint == alignStopSymbol)
+                  state = ReadSymbol;
+                else
+                  state = ReadAlignment;
+              }
+              else {
+                state = ReadSymbol;
+                break;
+              }
             }
             
             for(size_t j = 0; j < code.size(); j++) {
@@ -270,9 +337,11 @@ class PhraseCoder {
       TargetPhraseCollection* phraseColl = new TargetPhraseCollection();
       
       unsigned phraseStopSymbol = m_targetSymbolsMap["__SPECIAL_STOP_SYMBOL__"];
+      AlignPoint alignStopSymbol(-1, -1);
       
       TargetPhrase* targetPhrase;
       std::vector<float> scores;
+      std::set<std::pair<size_t, size_t> > alignment;
         
       enum DecodeState { New, Phrase, Score, Alignment, Add } state = New;
       
@@ -288,10 +357,15 @@ class PhraseCoder {
           
           if(state == New || state == Phrase)
             node = (byte & mask) ? m_symbolTree->node(node+1) : m_symbolTree->node(node);
-          else if(state == Score)
-            node = (byte & mask) ? m_scoreTree->node(node+1) : m_scoreTree->node(node);
+          else if(state == Score) {
+            size_t treeNum = scores.size() % m_scoreTrees.size();
+            node = (byte & mask)
+              ? m_scoreTrees[treeNum]->node(node+1)
+              : m_scoreTrees[treeNum]->node(node);
+          }
           else if(state == Alignment) {
-            //...
+            if(m_containsAlignmentInfo)
+              node = (byte & mask) ? m_alignTree->node(node+1) : m_alignTree->node(node);            
           }
           
           //std::cerr << "state : " << state << " " << i << " " << node << std::endl;
@@ -316,18 +390,32 @@ class PhraseCoder {
               }
             }
             else if(state == Score) {
-              float score = m_scoreTree->data(-node-1);
+              size_t treeNum = scores.size() % m_scoreTrees.size();
+              float score = m_scoreTrees[treeNum]->data(-node-1);
               scores.push_back(score);
+              
               if(scores.size() == m_numScoreComponent) {
                 targetPhrase->SetScore(m_feature, scores, *m_weight, m_weightWP, *m_languageModels);
                 scores.clear();
                 
-                state = Add;
+                if(m_containsAlignmentInfo)
+                  state = Alignment;
+                else
+                  state = Add;
               }
             }
             else if(state == Alignment) {
-              // ...
-              state = Add;
+              AlignPoint alignPoint = m_alignTree->data(-node-1);
+              if(alignPoint == alignStopSymbol) {
+                if(StaticData::Instance().UseAlignmentInfo())
+                  targetPhrase->SetAlignmentInfo(alignment);
+                state = Add;
+              }
+              else {
+                std::pair<size_t, size_t>
+                alignPointSizeT(alignPoint.first, alignPoint.second);
+                alignment.insert(alignPointSizeT);
+              }
             }
             
             if(state == Add) {
@@ -380,12 +468,12 @@ class PhraseCoder {
 //  
 //};
   
-  //std::cerr << "Creating Huffman tree for " << symbolCount.size() << " symbols" << std::endl;
-  //m_treeSymbols = new Hufftree<int, size_t>(symbolCount.begin(), symbolCount.end());
+  //std::cerr << "Creating Huffman tree for " << m_symbolCount.size() << " symbols" << std::endl;
+  //m_treeSymbols = new Hufftree<int, size_t>(m_symbolCount.begin(), m_symbolCount.end());
   //
   //{
   //  size_t sum = 0, sumall = 0;
-  //  for(SymbolCounter::iterator it = symbolCount.begin(); it != symbolCount.end(); it++) {
+  //  for(SymbolCounter::iterator it = m_symbolCount.begin(); it != m_symbolCount.end(); it++) {
   //    sumall += it->second * m_treeSymbols->encode(it->first).size();
   //    sum    += it->second;
   //  }

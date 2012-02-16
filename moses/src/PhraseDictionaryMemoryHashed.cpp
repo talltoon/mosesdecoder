@@ -197,9 +197,12 @@ TargetPhraseCollection
     return NULL;
 }
 
-void PhraseDictionaryMemoryHashed::AddEquivPhrase(const Phrase &source, const TargetPhrase &targetPhrase) { }
+void
+PhraseDictionaryMemoryHashed::AddEquivPhrase(const Phrase &source,
+                                             const TargetPhrase &targetPhrase) { }
 
-const TargetPhraseCollection *PhraseDictionaryMemoryHashed::GetTargetPhraseCollection(const Phrase &sourcePhrase) const {
+const TargetPhraseCollection*
+PhraseDictionaryMemoryHashed::GetTargetPhraseCollection(const Phrase &sourcePhrase) const {
   return const_cast<PhraseDictionaryMemoryHashed*>(this)->CreateTargetPhraseCollection(sourcePhrase);
 }
 
