@@ -107,46 +107,43 @@ class MonotonicVector {
         + m_anchors.size() * sizeof(NumT);
     }
     
-    bool load(std::FILE* in) {
-      bool ok = true;
+    size_t load(std::FILE* in) {
+      size_t byteSize = 0;
       
-      ok &= sizeof(bool) == fread(&m_final, sizeof(bool), 1, in);
-      ok &= sizeof(size_t) == fread(&m_size, sizeof(size_t), 1, in);
-      ok &= sizeof(PosT) == fread(&m_last, sizeof(PosT), 1, in);
+      byteSize += fread(&m_final, sizeof(bool), 1, in) * sizeof(bool);
+      byteSize += fread(&m_size, sizeof(size_t), 1, in) * sizeof(size_t);
+      byteSize += fread(&m_last, sizeof(PosT), 1, in) * sizeof(PosT);
       
       size_t size;
-      ok &= sizeof(size_t) == fread(&size, sizeof(size_t), 1, in);
+      byteSize += fread(&size, sizeof(size_t), 1, in) * sizeof(size_t);
       m_diffs.resize(size);
-      ok &= sizeof(unsigned int) * size ==
-        fread(&m_diffs[0], sizeof(unsigned int), size, in);
+      byteSize += fread(&m_diffs[0], sizeof(unsigned int), size, in) * sizeof(unsigned int);
       
-      ok &= sizeof(size_t) == fread(&size, sizeof(size_t), 1, in);
+      byteSize += fread(&size, sizeof(size_t), 1, in) * sizeof(size_t);
       m_anchors.resize(size);
-      ok &= sizeof(NumT) * size ==
-        fread(&m_anchors[0], sizeof(NumT), size, in);
+      byteSize += fread(&m_anchors[0], sizeof(NumT), size, in) * sizeof(NumT);
       
-      return true;
+      return byteSize;
     }
     
-    bool save(std::FILE* out) {
+    size_t save(std::FILE* out) {
       if(!m_final)
         commit();
       
-      bool ok = true;
-      ok &= sizeof(bool) == fwrite(&m_final, sizeof(bool), 1, out);
-      ok &= sizeof(size_t) == fwrite(&m_size, sizeof(size_t), 1, out);
-      ok &= sizeof(PosT) == fwrite(&m_last, sizeof(PosT), 1, out);
+      bool byteSize = 0;
+      byteSize += fwrite(&m_final, sizeof(bool), 1, out) * sizeof(bool);
+      byteSize += fwrite(&m_size, sizeof(size_t), 1, out) * sizeof(size_t);
+      byteSize += fwrite(&m_last, sizeof(PosT), 1, out) * sizeof(PosT);
       
       size_t size = m_diffs.size();
-      ok &= sizeof(size_t) == fwrite(&size, sizeof(size_t), 1, out);
-      ok &= sizeof(unsigned int)*size
-        == fwrite(&m_diffs[0], sizeof(unsigned int), size, out);
+      byteSize += fwrite(&size, sizeof(size_t), 1, out) * sizeof(size_t);
+      byteSize += fwrite(&m_diffs[0], sizeof(unsigned int), size, out) * sizeof(unsigned int);
       
       size = m_anchors.size();
-      ok &= sizeof(size_t) == fwrite(&size, sizeof(size_t), 1, out);
-      ok &= sizeof(unsigned int)*size
-        == fwrite(&m_anchors[0], sizeof(NumT), size, out);
-      return ok;
+      byteSize += fwrite(&size, sizeof(size_t), 1, out) * sizeof(size_t);
+      byteSize += fwrite(&m_anchors[0], sizeof(NumT), size, out) * sizeof(NumT);
+      
+      return byteSize;
     }
     
     void swap(MonotonicVector<PosT, NumT, stepSize> &mv) {

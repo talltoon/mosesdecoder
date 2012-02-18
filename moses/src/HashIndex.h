@@ -132,47 +132,55 @@ class HashIndex {
         CalcFprints();
     }
     
-    void Save(std::string filename) {
+    size_t Save(std::string filename) {
         std::FILE* mphf = std::fopen(filename.c_str(), "w");
-        Save(mphf);
+        size_t size = Save(mphf);
+        std::fclose(mphf);
+        return size;
     }
     
-    void Save(std::FILE * mphf) {
+    size_t Save(std::FILE * mphf) {
+        size_t byteSize = 0;
         cmph_dump(m_hash, mphf);
         
         size_t nkeys = m_fprints.size();
-        std::fwrite(&nkeys, sizeof(nkeys), 1, mphf);
-        std::fwrite(&m_posMap[0], sizeof(PosType), nkeys, mphf);
-        std::fwrite(&m_fprints[0], sizeof(Fprint), nkeys, mphf);
+        byteSize += std::fwrite(&nkeys, sizeof(nkeys), 1, mphf);
+        byteSize += std::fwrite(&m_posMap[0], sizeof(PosType), nkeys, mphf);
+        byteSize += std::fwrite(&m_fprints[0], sizeof(Fprint), nkeys, mphf);
+        return byteSize;
     }
     
-    void Load(std::string filename) {
+    size_t Load(std::string filename) {
         std::FILE* mphf = std::fopen(filename.c_str(), "r");
-        Load(mphf);
+        size_t size = Load(mphf);
+        std::fclose(mphf);
+        return size;
     }
     
-    void Load(std::FILE * mphf) {
+    size_t Load(std::FILE * mphf) {
         size_t a1 = std::ftell(mphf);
         m_hash = cmph_load(mphf);
         size_t a2 = std::ftell(mphf);
+        size_t byteSize = a2 - a1;
         
         std::cerr << "CMPH size: " << float(a2 - a1)/(1024*1024) << " Mb" << std::endl;
         
+        
+        
         size_t nkeys;
-        std::fread(&nkeys, sizeof(nkeys), 1, mphf);
+        byteSize += std::fread(&nkeys, sizeof(nkeys), 1, mphf) * sizeof(nkeys);
         m_fprints.resize(nkeys, 0);
         m_posMap.resize(nkeys, 0);
 
-        std::fread(&m_posMap[0], sizeof(PosType), nkeys, mphf);
+        byteSize += std::fread(&m_posMap[0], sizeof(PosType), nkeys, mphf) * sizeof(PosType);
         size_t a3 = std::ftell(mphf);
         std::cerr << "PosMap size: " << float(a3 - a2)/(1024*1024) << " Mb" << std::endl;
 
-        std::fread(&m_fprints[0], sizeof(Fprint), nkeys, mphf);
+        byteSize += std::fread(&m_fprints[0], sizeof(Fprint), nkeys, mphf) * sizeof(Fprint);
         size_t a4 = std::ftell(mphf);
         std::cerr << "Fprints size: " << float(a4 - a3)/(1024*1024) << " Mb" << std::endl;
 
-        std::cerr << "Total HashIndex size: " << float(a4 - a1)/(1024*1024) << " Mb" << std::endl;
-
+        return byteSize;
     }
     
     size_t GetSize() const {

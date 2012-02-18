@@ -71,8 +71,10 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
   size_t numElement = NOT_FOUND; // 3=old format, 5=async format which include word alignment info
 
   std::vector<std::vector<std::string> > collection;
-  m_phraseCoder = new PhraseCoder(m_output, m_feature, m_numScoreComponent,
+  m_phraseCoder = new PhraseCoder(m_input, m_output, m_feature, m_numScoreComponent,
                                   m_weight, m_weightWP, m_languageModels);
+  
+  m_phraseCoder->loadLexicalTable("lex.f2e");
   
   std::cerr << "Reading in phrase table" << std::endl;
   
@@ -81,8 +83,8 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
   std::stringstream targetStream;
   while(getline(inFile, line)) {
     ++line_num;
-    std::vector<string> tokens = TokenizeMultiCharSeparator( line , "|||" );
-    std::string sourcePhraseString = tokens[0];
+    
+    std::vector<std::string> tokens = TokenizeMultiCharSeparator( line , "|||" );
     
     if (numElement == NOT_FOUND) {
       // init numElement
@@ -98,6 +100,8 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
       abort();
     }
     
+    std::string sourcePhraseString = tokens[0];
+    
     bool isLHSEmpty = (sourcePhraseString.find_first_not_of(" \t", 0) == string::npos);
     if (isLHSEmpty) {
       TRACE_ERR( filePath << ":" << line_num << ": pt entry contains empty target, skipping\n");
@@ -106,9 +110,9 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
     
     if(sourcePhraseString != prevSourcePhrase && prevSourcePhrase != "") {
       ++phr_num;
-      if(phr_num % 100000 == 0)
+      if(phr_num % 10000 == 0)
         std::cerr << ".";
-      if(phr_num % 5000000 == 0)
+      if(phr_num % 500000 == 0)
         std::cerr << "[" << phr_num << "]" << std::endl;
       
       m_hash.AddKey(Trim(prevSourcePhrase));
@@ -118,12 +122,7 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
     collection.push_back(tokens);
     prevSourcePhrase = sourcePhraseString;    
   }
-  
-  ++phr_num;
-  if(phr_num % 100000 == 0)
-    std::cerr << ".";
-  if(phr_num % 5000000 == 0)
-    std::cerr << "[" << phr_num << "]" << std::endl;
+  std::cerr << std::endl;
 
   m_hash.AddKey(Trim(prevSourcePhrase));
   packedTargetPhrases.push_back(m_phraseCoder->packCollection(collection));
@@ -144,7 +143,8 @@ bool PhraseDictionaryMemoryHashed::LoadText(std::string filePath) {
       m_phraseCoder->encodePackedCollection(packedTargetPhrases[i])
     );
   }
-  
+  std::cerr << std::endl;
+
   return true;
 }
 
@@ -152,28 +152,33 @@ bool PhraseDictionaryMemoryHashed::LoadBinary(std::string filePath) {
     if (FileExists(filePath + ".mph"))
         filePath += ".mph";
 
-    m_phraseCoder = new PhraseCoder(m_output, m_feature, m_numScoreComponent,
+    m_phraseCoder = new PhraseCoder(m_input, m_output, m_feature, m_numScoreComponent,
                                     m_weight, m_weightWP, m_languageModels);
   
     std::FILE* pFile = std::fopen(filePath.c_str() , "r");
-    m_hash.Load(pFile);
-    m_phraseCoder->load(pFile);
-    m_targetPhrases.load(pFile);
+    size_t hashSize = m_hash.Load(pFile);
+    std::cerr << "Total HashIndex size: " << float(hashSize)/(1024*1024) << " M" << std::endl;
+
+    size_t coderSize = m_phraseCoder->load(pFile);
+    std::cerr << "Total PhraseCoder size: " << float(coderSize)/(1024*1024) << " M" << std::endl;
+
+    size_t phraseSize = m_targetPhrases.load(pFile, true);
+    std::cerr << "Total TargetPhrases size: " << float(phraseSize)/(1024*1024) << " M" << std::endl;
     std::fclose(pFile);
     
-    return true;
+    
+    return hashSize && coderSize && phraseSize;
 }
 
 bool PhraseDictionaryMemoryHashed::SaveBinary(std::string filePath) {
-    bool ok = true;
     
     std::FILE* pFile = std::fopen(filePath.c_str() , "w");
-    m_hash.Save(pFile);
-    m_phraseCoder->load(pFile);
-    m_targetPhrases.save(pFile);
+    size_t hashSize = m_hash.Save(pFile);
+    size_t coderSize = m_phraseCoder->save(pFile);
+    size_t phraseSize = m_targetPhrases.save(pFile);
     std::fclose(pFile);
     
-    return ok;
+    return hashSize && coderSize && phraseSize;
 }
 
 TargetPhraseCollection
@@ -185,7 +190,9 @@ TargetPhraseCollection
   std::string sourcePhraseString = sourcePhrase.GetStringRep(*m_input);
   size_t index = m_hash[sourcePhraseString];
   
-  if(index != m_hash.GetSize()) {  
+  if(index != m_hash.GetSize()) {
+    std::cerr<< "Index: " << index << " " << sourcePhrase << std::endl;
+    
     TargetPhraseCollection* phraseColl =
       m_phraseCoder->decodeCollection(m_targetPhrases[index], sourcePhrase);
     

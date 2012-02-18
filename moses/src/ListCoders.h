@@ -144,7 +144,7 @@ class Simple9 {
           case 1: bitlen = 28; shift = 0;  mask = 268435455; break;
           case 2: bitlen = 14; shift = 14; mask = 16383; break;
           case 3: bitlen = 9;  shift = 18; mask = 511; break;
-          case 4: bitlen = 7;  shift = 24; mask = 127; break;
+          case 4: bitlen = 7;  shift = 21; mask = 127; break;
           case 5: bitlen = 5;  shift = 20; mask = 31; break;
           case 6: bitlen = 4;  shift = 24; mask = 15; break;
           case 7: bitlen = 3;  shift = 24; mask = 7; break;
@@ -172,7 +172,7 @@ class Simple9 {
           case 1: bitlen = 28; shift = 0;  mask = 268435455; break;
           case 2: bitlen = 14; shift = 14; mask = 16383; break;
           case 3: bitlen = 9;  shift = 18; mask = 511; break;
-          case 4: bitlen = 7;  shift = 24; mask = 127; break;
+          case 4: bitlen = 7;  shift = 21; mask = 127; break;
           case 5: bitlen = 5;  shift = 20; mask = 31; break;
           case 6: bitlen = 4;  shift = 24; mask = 15; break;
           case 7: bitlen = 3;  shift = 24; mask = 7; break;

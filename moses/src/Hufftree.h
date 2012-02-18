@@ -151,6 +151,14 @@ Hufftree<PosType, DataType>::Hufftree(InputIterator begin, InputIterator end, bo
  : m_forEncoding(forEncoding){
   std::priority_queue<Node*, std::vector<Node*>, NodeOrder> pqueue;
 
+  if(std::distance(begin, end) == 1) {
+    std::vector<bool> zero(1, false);
+    m_encoding[begin->first] = zero;
+    m_nodes.resize(1, -1);
+    m_data.push_back(begin->first);
+    return;
+  }
+
   while (begin != end) {
     Node* dataNode = new Node(begin->second, begin->first);
     pqueue.push(dataNode);

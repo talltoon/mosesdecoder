@@ -153,49 +153,46 @@ class StringVector {
     PosT find(StringT &s) const;
     PosT find(const char* c) const;
     
-    virtual bool load(std::FILE* in, bool memoryMapped = false) {
+    virtual size_t load(std::FILE* in, bool memoryMapped = false) {
+      size_t size = 0;
       m_memoryMapped = memoryMapped;
       
-      bool success = true;
-      
-      success &= sizeof(bool) == std::fread(&m_sorted, sizeof(bool), 1, in);
-      success &= m_positions.load(in);
+      size += std::fread(&m_sorted, sizeof(bool), 1, in) * sizeof(bool);
+      size += m_positions.load(in);
 
-      success &= loadCharArray(m_charArray, in, m_memoryMapped);       
-      return success;
+      size += loadCharArray(m_charArray, in, m_memoryMapped);       
+      return size;
     }
     
-    bool loadCharArray(std::vector<ValueT, std::allocator<ValueT> >& c,
+    size_t loadCharArray(std::vector<ValueT, std::allocator<ValueT> >& c,
                        std::FILE* in, bool map = false) {
       // Can only be read into memory. Mapping not possible with std:allocator.
       assert(map == false);
       
-      bool success = true;
+      size_t byteSize = 0;
       
       size_t valSize;
-      success &= sizeof(size_t) == std::fread(&valSize, sizeof(size_t), 1, in);
+      byteSize += std::fread(&valSize, sizeof(size_t), 1, in) * sizeof(size_t);
       
       c.resize(valSize, 0);
-      success &= valSize*sizeof(ValueT)
-                 == std::fread(&c[0], sizeof(ValueT), valSize, in);
+      byteSize += std::fread(&c[0], sizeof(ValueT), valSize, in) * sizeof(ValueT);
     
-      return success;
+      return byteSize;
     }
     
-    bool loadCharArray(std::vector<ValueT, MmapAllocator<ValueT> >& c,
+    size_t loadCharArray(std::vector<ValueT, MmapAllocator<ValueT> >& c,
                        std::FILE* in, bool map = false) {
-      bool success = true;
+      size_t byteSize;
 
       size_t valSize;
-      success &= sizeof(size_t) == std::fread(&valSize, sizeof(size_t), 1, in);
+      byteSize += std::fread(&valSize, sizeof(size_t), 1, in) * sizeof(size_t);
 
       if(map == false) {
         // Read data into temporary file (default constructor of MmapAllocator)
         // and map memory onto temporary file. Can be resized.
         
         c.resize(valSize, 0);
-        success &= valSize*sizeof(ValueT)
-                   == std::fread(&c[0], sizeof(ValueT), valSize, in);    
+        byteSize += std::fread(&c[0], sizeof(ValueT), valSize, in) * sizeof(ValueT);    
       }
       else {
         // Map it directly on specified region of file "in" starting at valPos
@@ -206,35 +203,39 @@ class StringVector {
         std::vector<ValueT, Allocator<ValueT> > charArrayTemp(alloc);
         charArrayTemp.resize(valSize);
         c.swap(charArrayTemp);
+        
+        byteSize += valSize * sizeof(ValueT);
       }
       
-      return success;
+      return byteSize;
     }
     
-    virtual bool load(std::string filename, bool memoryMapped = false) {
+    virtual size_t load(std::string filename, bool memoryMapped = false) {
       std::FILE* pFile = fopen(filename.c_str(), "r");
-      load(pFile, memoryMapped);
+      size_t byteSize = load(pFile, memoryMapped);
       fclose(pFile);
-      return true;
+      return byteSize;
     }
 
-    virtual bool save(std::FILE* out) {
-      std::fwrite(&m_sorted, sizeof(bool), 1, out);
+    virtual size_t save(std::FILE* out) {
+      size_t byteSize;
+      byteSize += std::fwrite(&m_sorted, sizeof(bool), 1, out) * sizeof(bool);
       
-      m_positions.save(out);
+      byteSize += m_positions.save(out);
     
       size_t valSize = size2();
-      std::fwrite(&valSize, sizeof(size_t), 1, out);
-      std::fwrite(&m_charArray[0], sizeof(ValueT), valSize, out);
+      byteSize += std::fwrite(&valSize, sizeof(size_t), 1, out) * sizeof(size_t);
+      byteSize += std::fwrite(&m_charArray[0], sizeof(ValueT), valSize, out) * sizeof(ValueT);
 
-      return true;
+      return byteSize;
     }
     
-    virtual bool save(std::string filename) {
+    virtual size_t save(std::string filename) {
+      size_t byteSize;
       std::FILE* pFile = fopen(filename.c_str(), "w");
-      save(pFile);
+      byteSize = save(pFile);
       fclose(pFile);
-      return true;
+      return byteSize;
     }
     
 };
