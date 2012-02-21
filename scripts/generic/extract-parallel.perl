@@ -98,28 +98,37 @@ if ($numParallel > 1)
   print $extractCmd;
   print $extractInvCmd;
   print $extractOrderingCmd;
-  `$extractCmd`;
-  `$extractInvCmd`;
-
+  
   my $numStr = NumStr(0);
-  if (-e "$TMPDIR/extract.$numStr.o")
-  {
-    `$extractOrderingCmd`;
-  }
+  if (-e "$TMPDIR/extract.$numStr")
+  {
+    `$extractCmd`;
+  }
+  if (-e "$TMPDIR/extract.$numStr.inv")
+  {
+    `$extractInvCmd`;
+  }
+  if (-e "$TMPDIR/extract.$numStr.o")
+  {
+    `$extractOrderingCmd`;
+  }
 }
 else
 {
-  rename "$TMPDIR/extract.0", "$extract";
-  rename "$TMPDIR/extract.0.inv", "$extract.inv";
 
-
-  my $numStr = NumStr(0);
-  if (-e "$TMPDIR/extract.$numStr.o")
-  {
-    rename "$TMPDIR/extract.0.o", "$extract.o";
-  }
+  if (-e "$TMPDIR/extract.0")
+  {
+    rename "$TMPDIR/extract.0", "$extract";
+  }
+  if (-e "$TMPDIR/extract.0.inv")
+  {
+    rename "$TMPDIR/extract.0.inv", "$extract.inv";
+  }
+  if (-e "$TMPDIR/extract.0.o")
+  {
+    rename "$TMPDIR/extract.0.o", "$extract.o";
+  }
 }
-
 
 $cmd = "rm -rf $TMPDIR \n";
 print $cmd;
